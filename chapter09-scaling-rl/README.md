@@ -138,6 +138,84 @@ $$b = \bar{y} - w\bar{x}$$
 
 > 🤔 **暂停想想**：为什么用"平方"而不是"绝对值"？因为平方是可微的，可以用解析方法求解；而且平方对大误差惩罚更重，这通常是我们想要的。
 
+#### 💻 动手验证：用最小二乘拟合幂律
+
+咱们用代码来验证上面学到的概念：用最小二乘法拟合 Kaplan 缩放定律，看看在双对数坐标下，损失和参数量是不是真的呈线性关系。
+
+
+
+```python
+# scripts/power_law_fit.py
+"""
+用最小二乘法拟合 Kaplan 缩放定律
+验证：Loss ∝ N^{-α}
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+# ========== 模拟数据 ==========
+# 模型参数量（从 1M 到 100B）
+N_values = np.array([1e6, 5e6, 1e7, 5e7, 1e8, 5e8, 1e9, 5e9, 1e10, 5e10, 1e11])
+true_alpha = 0.076  # Kaplan 的 α
+true_A = 5.0
+
+# 生成带噪声的损失值
+L_true = true_A * N_values ** (-true_alpha)
+noise = np.random.normal(0, 0.02, len(N_values))
+L_observed = L_true + noise * L_true  # 相对噪声
+
+# ========== 最小二乘拟合（双对数空间）==========
+log_N = np.log(N_values)
+log_L = np.log(L_observed)
+
+# 计算均值
+log_N_mean = np.mean(log_N)
+log_L_mean = np.mean(log_L)
+
+# 最小二乘估计
+alpha_hat = np.sum((log_N - log_N_mean) * (log_L - log_L_mean)) / np.sum((log_N - log_N_mean) ** 2)
+log_A_hat = log_L_mean - alpha_hat * log_N_mean
+A_hat = np.exp(log_A_hat)
+
+print(f"真实参数: α = {true_alpha}, A = {true_A}")
+print(f"拟合参数: α = {-alpha_hat:.4f}, A = {A_hat:.4f}")
+print(f"相对误差: α 误差 = {abs(-alpha_hat - true_alpha)/true_alpha*100:.2f}%")
+
+# ========== 可视化 ==========
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+# 左图：普通坐标
+L_fitted = A_hat * N_values ** alpha_hat
+axes[0].scatter(N_values, L_observed, color='steelblue', s=60, zorder=5, label='观测数据')
+axes[0].plot(N_values, L_fitted, 'r-', linewidth=2, label=f'拟合: L = {A_hat:.2f} × N^({alpha_hat:.4f})')
+axes[0].set_xlabel('模型参数量 N', fontsize=12)
+axes[0].set_ylabel('交叉熵损失 L', fontsize=12)
+axes[0].set_title('缩放定律（普通坐标）', fontsize=14)
+axes[0].legend(fontsize=10)
+axes[0].grid(True, alpha=0.3)
+
+# 右图：双对数坐标
+axes[1].scatter(log_N, log_L, color='steelblue', s=60, zorder=5, label='观测数据（取对数）')
+axes[1].plot(log_N, log_A_hat + alpha_hat * log_N, 'r-', linewidth=2,
+             label=f'线性拟合: ln L = {log_A_hat:.2f} + ({alpha_hat:.4f}) × ln N')
+axes[1].set_xlabel('ln(模型参数量 N)', fontsize=12)
+axes[1].set_ylabel('ln(交叉熵损失 L)', fontsize=12)
+axes[1].set_title('缩放定律（双对数坐标 → 线性）', fontsize=14)
+axes[1].legend(fontsize=10)
+axes[1].grid(True, alpha=0.3)
+
+plt.tight_layout()
+plt.savefig('./images/power_law_fit.png', dpi=150, bbox_inches='tight')
+print("\n图片已保存到 ./images/power_law_fit.png")
+```
+
+![幂律拟合结果](./images/power_law_fit.png)
+
+> 🌱 **观察要点**：左图是普通坐标下的幂律曲线——看起来弯曲得很厉害。但右图取了对数后，数据点几乎完美地落在一条直线上！这就是幂律的"双对数直线"特征。最小二乘法帮咱们从杂乱的数据中精确地找到了这条直线，拟合出的 α 值和真实值非常接近。试试调整 `true_alpha` 和噪声大小，看看拟合结果会有什么变化？
+
 ---
 
 ### 4. 强化学习基础：策略梯度
@@ -187,6 +265,110 @@ $$\nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}\left[\sum_{t=0}^{T
 $$\nabla_\theta J(\theta) \approx \sum_t \nabla_\theta \ln \pi_\theta(a_t|s_t) \cdot (R_t - b(s_t))$$
 
 常用的基线是价值函数 $V(s_t)$，这就是 **Actor-Critic** 的雏形。
+
+#### 💻 动手验证：模拟策略梯度
+
+咱们用代码来验证上面学到的概念：用 REINFORCE 算法训练一个简单的策略，看看它能不能从均匀分布逐渐学会选择最优动作。
+
+
+
+```python
+# scripts/policy_gradient_sim.py
+"""
+模拟策略梯度优化过程
+场景：一个简化的"猜数字"游戏，策略从均匀分布逐渐学到正确答案
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+# ========== 环境设置 ==========
+# 10 个动作，动作 7 是最优的
+n_actions = 10
+optimal_action = 7
+reward_table = np.array([0.1, 0.2, 0.15, 0.3, 0.25, 0.4, 0.5, 1.0, 0.6, 0.35])
+
+# ========== 策略初始化（均匀分布）==========
+theta = np.zeros(n_actions)  # logits
+learning_rate = 0.5
+n_episodes = 200
+n_steps_per_update = 10
+
+# 记录
+episode_rewards = []
+policy_history = []
+
+for episode in range(n_episodes):
+    # 从 softmax 策略采样
+    probs = np.exp(theta) / np.sum(np.exp(theta))
+    
+    # 采样多条轨迹
+    trajectories = np.random.choice(n_actions, size=n_steps_per_update, p=probs)
+    rewards = reward_table[trajectories]
+    
+    # 计算基线（均值）
+    baseline = np.mean(rewards)
+    
+    # 策略梯度更新
+    grad = np.zeros(n_actions)
+    for a, r in zip(trajectories, rewards):
+        # ∇ ln π(a) = one_hot(a) - π
+        one_hot = np.zeros(n_actions)
+        one_hot[a] = 1
+        grad += (one_hot - probs) * (r - baseline)
+    grad /= n_steps_per_update
+    
+    theta += learning_rate * grad
+    
+    # 记录
+    episode_rewards.append(np.mean(rewards))
+    if episode % 20 == 0 or episode == n_episodes - 1:
+        policy_history.append((episode, probs.copy()))
+
+# ========== 可视化 ==========
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+# 左图：奖励曲线
+axes[0].plot(episode_rewards, alpha=0.3, color='lightblue')
+window = 20
+smoothed = np.convolve(episode_rewards, np.ones(window)/window, mode='valid')
+axes[0].plot(range(window-1, len(episode_rewards)), smoothed, color='steelblue', linewidth=2, label=f'滑动平均 (window={window})')
+axes[0].axhline(y=reward_table[optimal_action], color='red', linestyle='--', alpha=0.5, label=f'最优奖励 = {reward_table[optimal_action]}')
+axes[0].set_xlabel('Episode', fontsize=12)
+axes[0].set_ylabel('平均奖励', fontsize=12)
+axes[0].set_title('REINFORCE 学习曲线', fontsize=14)
+axes[0].legend(fontsize=10)
+axes[0].grid(True, alpha=0.3)
+
+# 右图：策略演化
+x = np.arange(n_actions)
+colors = plt.cm.Blues(np.linspace(0.3, 1.0, len(policy_history)))
+for i, (ep, probs) in enumerate(policy_history):
+    axes[1].bar(x + i * 0.08 - 0.2, probs, width=0.08, color=colors[i], 
+                label=f'Episode {ep}', alpha=0.8)
+axes[1].axvline(x=optimal_action, color='red', linestyle='--', alpha=0.5, label=f'最优动作 = {optimal_action}')
+axes[1].set_xlabel('动作', fontsize=12)
+axes[1].set_ylabel('概率', fontsize=12)
+axes[1].set_title('策略概率的演化', fontsize=14)
+axes[1].set_xticks(x)
+axes[1].legend(fontsize=8, ncol=2)
+axes[1].grid(True, alpha=0.3)
+
+plt.tight_layout()
+plt.savefig('./images/policy_gradient.png', dip=150, bbox_inches='tight')
+print("图片已保存到 ./images/policy_gradient.png")
+print(f"\n最终策略：")
+final_probs = np.exp(theta) / np.sum(np.exp(theta))
+for a in range(n_actions):
+    bar = '█' * int(final_probs[a] * 50)
+    print(f"  动作 {a}: {final_probs[a]:.3f} {bar}")
+```
+
+![策略梯度学习曲线](./images/policy_gradient.png)
+
+> 🌱 **观察要点**：左图的学习曲线展示了策略梯度从"随机猜"到"基本选对"的过程，虽然中间有波动（这就是策略梯度的**高方差**问题！）。右图的策略演化更直观——你可以看到概率质量从均匀分布逐渐集中到动作 7（最优动作）上。注意基线的引入显著降低了方差，让训练更稳定。
 
 ---
 
@@ -373,201 +555,11 @@ $$L_{\text{total}} = L^{\text{CLIP}} - c_1 \cdot L^{\text{VF}} + c_2 \cdot S[\pi
 - $S[\pi_\theta] = -\sum_a \pi_\theta(a|s) \ln \pi_\theta(a|s)$：策略熵（鼓励探索）
 - $c_1, c_2$ 是系数
 
----
+#### 💻 动手验证：PPO 裁剪效果可视化
 
-## 🔢 公式推导总结
+咱们用代码来验证上面学到的概念：把 PPO 的裁剪目标函数画出来，直观理解它为什么能防止策略更新"翻车"，同时看看 DPO 的损失函数长什么样。
 
-### 幂律拟合
 
-给定 $(N_i, L_i)$ 数据，取双对数后用最小二乘拟合 $\ln L = \ln A - \alpha \ln N$：
-
-$$\hat{\alpha} = \frac{\sum_i (\ln N_i - \overline{\ln N})(\ln L_i - \overline{\ln L})}{\sum_i (\ln N_i - \overline{\ln N})^2}$$
-
-$$\ln \hat{A} = \overline{\ln L} + \hat{\alpha} \cdot \overline{\ln N}$$
-
-### DPO 核心一步
-
-$$r(x,y) = \beta \ln \frac{\pi_\theta(y|x)}{\pi_{\text{ref}}(y|x)} + \text{const}$$
-
-偏好损失：
-
-$$\mathcal{L}_{\text{DPO}} = -\mathbb{E}\left[\ln\sigma\left(\beta\left(\ln\frac{\pi_\theta(y_w|x)}{\pi_{\text{ref}}(y_w|x)} - \ln\frac{\pi_\theta(y_l|x)}{\pi_{\text{ref}}(y_l|x)}\right)\right)\right]$$
-
-### PPO 裁剪核心
-
-$$L^{\text{CLIP}} = \mathbb{E}\left[\min\left(\frac{\pi_\theta}{\pi_{\text{old}}} \cdot \hat{A},\ \text{clip}\left(\frac{\pi_\theta}{\pi_{\text{old}}}, 1-\epsilon, 1+\epsilon\right) \cdot \hat{A}\right)\right]$$
-
----
-
-## 💻 代码验证
-
-### 实验 1：用最小二乘拟合幂律
-
-```python
-# scripts/power_law_fit.py
-"""
-用最小二乘法拟合 Kaplan 缩放定律
-验证：Loss ∝ N^{-α}
-"""
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-np.random.seed(42)
-
-# ========== 模拟数据 ==========
-# 模型参数量（从 1M 到 100B）
-N_values = np.array([1e6, 5e6, 1e7, 5e7, 1e8, 5e8, 1e9, 5e9, 1e10, 5e10, 1e11])
-true_alpha = 0.076  # Kaplan 的 α
-true_A = 5.0
-
-# 生成带噪声的损失值
-L_true = true_A * N_values ** (-true_alpha)
-noise = np.random.normal(0, 0.02, len(N_values))
-L_observed = L_true + noise * L_true  # 相对噪声
-
-# ========== 最小二乘拟合（双对数空间）==========
-log_N = np.log(N_values)
-log_L = np.log(L_observed)
-
-# 计算均值
-log_N_mean = np.mean(log_N)
-log_L_mean = np.mean(log_L)
-
-# 最小二乘估计
-alpha_hat = np.sum((log_N - log_N_mean) * (log_L - log_L_mean)) / np.sum((log_N - log_N_mean) ** 2)
-log_A_hat = log_L_mean - alpha_hat * log_N_mean
-A_hat = np.exp(log_A_hat)
-
-print(f"真实参数: α = {true_alpha}, A = {true_A}")
-print(f"拟合参数: α = {-alpha_hat:.4f}, A = {A_hat:.4f}")
-print(f"相对误差: α 误差 = {abs(-alpha_hat - true_alpha)/true_alpha*100:.2f}%")
-
-# ========== 可视化 ==========
-fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-
-# 左图：普通坐标
-L_fitted = A_hat * N_values ** alpha_hat
-axes[0].scatter(N_values, L_observed, color='steelblue', s=60, zorder=5, label='观测数据')
-axes[0].plot(N_values, L_fitted, 'r-', linewidth=2, label=f'拟合: L = {A_hat:.2f} × N^({alpha_hat:.4f})')
-axes[0].set_xlabel('模型参数量 N', fontsize=12)
-axes[0].set_ylabel('交叉熵损失 L', fontsize=12)
-axes[0].set_title('缩放定律（普通坐标）', fontsize=14)
-axes[0].legend(fontsize=10)
-axes[0].grid(True, alpha=0.3)
-
-# 右图：双对数坐标
-axes[1].scatter(log_N, log_L, color='steelblue', s=60, zorder=5, label='观测数据（取对数）')
-axes[1].plot(log_N, log_A_hat + alpha_hat * log_N, 'r-', linewidth=2,
-             label=f'线性拟合: ln L = {log_A_hat:.2f} + ({alpha_hat:.4f}) × ln N')
-axes[1].set_xlabel('ln(模型参数量 N)', fontsize=12)
-axes[1].set_ylabel('ln(交叉熵损失 L)', fontsize=12)
-axes[1].set_title('缩放定律（双对数坐标 → 线性）', fontsize=14)
-axes[1].legend(fontsize=10)
-axes[1].grid(True, alpha=0.3)
-
-plt.tight_layout()
-plt.savefig('./images/power_law_fit.png', dpi=150, bbox_inches='tight')
-print("\n图片已保存到 ./images/power_law_fit.png")
-```
-
-### 实验 2：模拟策略梯度（REINFORCE）
-
-```python
-# scripts/policy_gradient_sim.py
-"""
-模拟策略梯度优化过程
-场景：一个简化的"猜数字"游戏，策略从均匀分布逐渐学到正确答案
-"""
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-np.random.seed(42)
-
-# ========== 环境设置 ==========
-# 10 个动作，动作 7 是最优的
-n_actions = 10
-optimal_action = 7
-reward_table = np.array([0.1, 0.2, 0.15, 0.3, 0.25, 0.4, 0.5, 1.0, 0.6, 0.35])
-
-# ========== 策略初始化（均匀分布）==========
-theta = np.zeros(n_actions)  # logits
-learning_rate = 0.5
-n_episodes = 200
-n_steps_per_update = 10
-
-# 记录
-episode_rewards = []
-policy_history = []
-
-for episode in range(n_episodes):
-    # 从 softmax 策略采样
-    probs = np.exp(theta) / np.sum(np.exp(theta))
-    
-    # 采样多条轨迹
-    trajectories = np.random.choice(n_actions, size=n_steps_per_update, p=probs)
-    rewards = reward_table[trajectories]
-    
-    # 计算基线（均值）
-    baseline = np.mean(rewards)
-    
-    # 策略梯度更新
-    grad = np.zeros(n_actions)
-    for a, r in zip(trajectories, rewards):
-        # ∇ ln π(a) = one_hot(a) - π
-        one_hot = np.zeros(n_actions)
-        one_hot[a] = 1
-        grad += (one_hot - probs) * (r - baseline)
-    grad /= n_steps_per_update
-    
-    theta += learning_rate * grad
-    
-    # 记录
-    episode_rewards.append(np.mean(rewards))
-    if episode % 20 == 0 or episode == n_episodes - 1:
-        policy_history.append((episode, probs.copy()))
-
-# ========== 可视化 ==========
-fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-
-# 左图：奖励曲线
-axes[0].plot(episode_rewards, alpha=0.3, color='lightblue')
-window = 20
-smoothed = np.convolve(episode_rewards, np.ones(window)/window, mode='valid')
-axes[0].plot(range(window-1, len(episode_rewards)), smoothed, color='steelblue', linewidth=2, label=f'滑动平均 (window={window})')
-axes[0].axhline(y=reward_table[optimal_action], color='red', linestyle='--', alpha=0.5, label=f'最优奖励 = {reward_table[optimal_action]}')
-axes[0].set_xlabel('Episode', fontsize=12)
-axes[0].set_ylabel('平均奖励', fontsize=12)
-axes[0].set_title('REINFORCE 学习曲线', fontsize=14)
-axes[0].legend(fontsize=10)
-axes[0].grid(True, alpha=0.3)
-
-# 右图：策略演化
-x = np.arange(n_actions)
-colors = plt.cm.Blues(np.linspace(0.3, 1.0, len(policy_history)))
-for i, (ep, probs) in enumerate(policy_history):
-    axes[1].bar(x + i * 0.08 - 0.2, probs, width=0.08, color=colors[i], 
-                label=f'Episode {ep}', alpha=0.8)
-axes[1].axvline(x=optimal_action, color='red', linestyle='--', alpha=0.5, label=f'最优动作 = {optimal_action}')
-axes[1].set_xlabel('动作', fontsize=12)
-axes[1].set_ylabel('概率', fontsize=12)
-axes[1].set_title('策略概率的演化', fontsize=14)
-axes[1].set_xticks(x)
-axes[1].legend(fontsize=8, ncol=2)
-axes[1].grid(True, alpha=0.3)
-
-plt.tight_layout()
-plt.savefig('./images/policy_gradient.png', dip=150, bbox_inches='tight')
-print("图片已保存到 ./images/policy_gradient.png")
-print(f"\n最终策略：")
-final_probs = np.exp(theta) / np.sum(np.exp(theta))
-for a in range(n_actions):
-    bar = '█' * int(final_probs[a] * 50)
-    print(f"  动作 {a}: {final_probs[a]:.3f} {bar}")
-```
-
-### 实验 3：PPO 裁剪效果可视化
 
 ```python
 # scripts/ppo_clip_visual.py
@@ -631,6 +623,34 @@ plt.tight_layout()
 plt.savefig('./images/ppo_dpo_visual.png', dpi=150, bbox_inches='tight')
 print("图片已保存到 ./images/ppo_dpo_visual.png")
 ```
+
+![PPO与DPO效果对比](./images/ppo_dpo_visual.png)
+
+> 🌱 **观察要点**：左图展示了 PPO-Clip 的核心机制——当优势为正（好动作）时，概率比被限制在 1+ε 以下；当优势为负（坏动作）时，概率比被限制在 1-ε 以上。这条"平顶"和"平底"就是 PPO 防止策略突变的安全阀。右图是 DPO 的损失函数，当模型的偏好方向和人类一致时（margin > 0），损失趋近于 0；反之损失迅速增大——这就是 DPO "直接优化偏好"的数学力量。对比两种方法，你能感受到 PPO 和 DPO 设计哲学的不同吗？
+
+---
+
+## 🔢 公式推导总结
+
+### 幂律拟合
+
+给定 $(N_i, L_i)$ 数据，取双对数后用最小二乘拟合 $\ln L = \ln A - \alpha \ln N$：
+
+$$\hat{\alpha} = \frac{\sum_i (\ln N_i - \overline{\ln N})(\ln L_i - \overline{\ln L})}{\sum_i (\ln N_i - \overline{\ln N})^2}$$
+
+$$\ln \hat{A} = \overline{\ln L} + \hat{\alpha} \cdot \overline{\ln N}$$
+
+### DPO 核心一步
+
+$$r(x,y) = \beta \ln \frac{\pi_\theta(y|x)}{\pi_{\text{ref}}(y|x)} + \text{const}$$
+
+偏好损失：
+
+$$\mathcal{L}_{\text{DPO}} = -\mathbb{E}\left[\ln\sigma\left(\beta\left(\ln\frac{\pi_\theta(y_w|x)}{\pi_{\text{ref}}(y_w|x)} - \ln\frac{\pi_\theta(y_l|x)}{\pi_{\text{ref}}(y_l|x)}\right)\right)\right]$$
+
+### PPO 裁剪核心
+
+$$L^{\text{CLIP}} = \mathbb{E}\left[\min\left(\frac{\pi_\theta}{\pi_{\text{old}}} \cdot \hat{A},\ \text{clip}\left(\frac{\pi_\theta}{\pi_{\text{old}}}, 1-\epsilon, 1+\epsilon\right) \cdot \hat{A}\right)\right]$$
 
 ---
 

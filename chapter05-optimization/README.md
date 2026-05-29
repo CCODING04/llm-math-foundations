@@ -450,6 +450,10 @@ def adam(grad_fn, w0, lr=0.01, beta1=0.9, beta2=0.999, eps=1e-8, steps=200):
 
 ![二次函数上的优化器对比](./images/optimizer_quadratic_path.png)
 
+![二次函数上的损失收敛曲线](./images/optimizer_quadratic_loss.png)
+
+*图：三个优化器在二次函数上的损失值变化。Adam 收敛最快最稳。*
+
 ![Rosenbrock 函数上的优化器对比](./images/optimizer_rosenbrock_path.png)
 
 ![损失值随迭代步数变化](./images/optimizer_rosenbrock_loss.png)

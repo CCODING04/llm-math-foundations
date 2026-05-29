@@ -592,9 +592,18 @@ python scripts/sampling_strategies.py
 ```
 
 生成的图片：
-- `![温度系数效果](./images/temperature_effect.png)` — 温度对分布的影响
-- `![Top-K vs Top-P 对比](./images/topk_topp_comparison.png)` — 两种截断策略
-- `![采样步骤可视化](./images/sampling_steps.png)` — 逐步选择过程
+
+![温度系数效果](./images/temperature_effect.png)
+
+*图：温度对分布的影响*
+
+![Top-K vs Top-P 对比](./images/topk_topp_comparison.png)
+
+*图：两种截断策略*
+
+![采样步骤可视化](./images/sampling_steps.png)
+
+*图：逐步选择过程*
 
 ---
 

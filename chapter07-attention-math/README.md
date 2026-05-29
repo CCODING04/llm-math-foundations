@@ -296,6 +296,10 @@ $$2 \times 12 \times 1024 \times 768 \times 2 \text{ bytes (float16)} \approx 36
 
 对于更大的模型（如 LLaMA-70B），KV Cache 会消耗数 GB 显存——这就是 **MQA（Multi-Query Attention）** 和 **GQA（Grouped-Query Attention）** 优化的动机。
 
+![KV Cache 对比](./images/kv_cache_comparison.png)
+
+*🌱 图：有无 KV Cache 时推理计算的对比——没有缓存时每步都要重新计算所有 token 的 Key 和 Value，有了缓存后只需计算新增 token 的部分，推理速度从 O(n²) 降到 O(n)*
+
 ---
 
 ## 🔢 完整公式推导（不跳步）

@@ -255,7 +255,7 @@ $$\boxed{f(x) = \frac{1}{\sqrt{2\pi}\sigma} \exp\left(-\frac{(x-\mu)^2}{2\sigma^
 
 为什么正态分布这么重要？**中心极限定理**（后面会讲）告诉我们，大量独立随机因素的叠加效果近似正态分布。自然界和工程中，到处都是。
 
-![常见概率分布](./images/distributions.png)
+![常见概率分布](./images/gaussian_distribution.png)
 
 *图：均匀分布、二项分布、正态分布的可视化*
 
@@ -603,6 +603,10 @@ plt.savefig('./images/distributions.png', dpi=150)
 plt.show()
 print("✅ 图片已保存: ./images/distributions.png")
 ```
+
+![MLE与交叉熵](./images/mle_cross_entropy.png)
+
+*图：MLE 估计过程与交叉熵损失的对应关系——训练语言模型本质上就是在做极大似然估计*
 
 ### 运行所有实验
 
