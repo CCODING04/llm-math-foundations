@@ -6,15 +6,16 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.rcParams['font.sans-serif'] = ['PingFang SC', 'Heiti SC', 'STHeiti', 'Arial Unicode MS']
 matplotlib.rcParams['axes.unicode_minus'] = False
+matplotlib.rcParams['text.usetex'] = False  # 使用 mathtext 而非 full LaTeX
 import numpy as np
 
 fig, ax = plt.subplots(1, 1, figsize=(8, 6))
 
 # 画几个向量
 vectors = {
-    'v₁ = [2, 3]': np.array([2, 3]),
-    'v₂ = [-1, 2]': np.array([-1, 2]),
-    'v₃ = [3, -1]': np.array([3, -1]),
+    r'$v_1$ = [2, 3]': np.array([2, 3]),
+    r'$v_2$ = [-1, 2]': np.array([-1, 2]),
+    r'$v_3$ = [3, -1]': np.array([3, -1]),
 }
 
 colors = ['#2196F3', '#FF5722', '#4CAF50']
@@ -26,7 +27,7 @@ for (label, v), color in zip(vectors.items(), colors):
     # 标注向量长度
     norm = np.linalg.norm(v)
     mid = v / 2
-    ax.text(mid[0] - 0.3, mid[1] - 0.3, f'‖v‖={norm:.2f}', fontsize=9, color=color,
+    ax.text(mid[0] - 0.3, mid[1] - 0.3, f'$||v||$={norm:.2f}', fontsize=9, color=color,
             bbox=dict(boxstyle='round,pad=0.2', facecolor='white', edgecolor=color, alpha=0.8))
 
 # 坐标轴

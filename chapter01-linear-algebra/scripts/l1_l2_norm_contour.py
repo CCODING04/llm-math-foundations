@@ -27,10 +27,10 @@ ax = axes[0]
 cs = ax.contour(X, Y, L2, levels=[0.25, 0.5, 0.75, 1.0, 1.25], cmap='Blues')
 ax.clabel(cs, inline=True, fontsize=9, fmt='%.2f')
 ax.plot(np.cos(np.linspace(0, 2*np.pi, 100)), np.sin(np.linspace(0, 2*np.pi, 100)),
-        'b-', lw=2, label='‖v‖₂ = 1')
+        'b-', lw=2, label=r'$||v||_2 = 1$')
 ax.set_title('L2 范数等高线（圆形）\n正则化效果：温和地缩小所有权重', fontsize=12, fontweight='bold')
-ax.set_xlabel('w₁', fontsize=12)
-ax.set_ylabel('w₂', fontsize=12)
+ax.set_xlabel(r'$w_1$', fontsize=12)
+ax.set_ylabel(r'$w_2$', fontsize=12)
 ax.set_aspect('equal')
 ax.grid(True, alpha=0.3)
 ax.legend(fontsize=10)
@@ -42,10 +42,10 @@ ax.clabel(cs, inline=True, fontsize=9, fmt='%.2f')
 # 画 L1 单位球（菱形）
 diamond_x = [1, 0, -1, 0, 1]
 diamond_y = [0, 1, 0, -1, 0]
-ax.plot(diamond_x, diamond_y, 'r-', lw=2, label='‖v‖₁ = 1')
+ax.plot(diamond_x, diamond_y, 'r-', lw=2, label=r'$||v||_1 = 1$')
 ax.set_title('L1 范数等高线（菱形）\n正则化效果：把部分权重推向精确的零', fontsize=12, fontweight='bold')
-ax.set_xlabel('w₁', fontsize=12)
-ax.set_ylabel('w₂', fontsize=12)
+ax.set_xlabel(r'$w_1$', fontsize=12)
+ax.set_ylabel(r'$w_2$', fontsize=12)
 ax.set_aspect('equal')
 ax.grid(True, alpha=0.3)
 ax.legend(fontsize=10)
