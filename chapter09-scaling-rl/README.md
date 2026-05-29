@@ -69,6 +69,10 @@ $$L(D) = \left(\frac{D_c}{D}\right)^{\alpha_D}$$
 
 ---
 
+> ⚠️ **Kaplan 的局限性**：Kaplan 定律的 $α_N \approx 0.076$ 非常小，意味着损失对参数量极不敏感——暗示应该拼命增大模型，数据少点没关系。这直接导致了 GPT-3 的策略：175B 参数却只训了 300B tokens。然而，Kaplan 的实验有一个关键缺陷：**他们在固定的、偏小的数据集上训练不同大小的模型**，数据量成了瓶颈，导致大模型的潜力被低估。换句话说，Kaplan 的结论天然偏向"大模型小数据"。
+
+---
+
 ### 2. Chinchilla 缩放定律（2022）
 
 DeepMind 的 Hoffmann 等人在 2022 年提出了更精确的缩放定律（Chinchilla 论文），核心发现：
@@ -109,6 +113,8 @@ $$D_{\text{opt}} \approx 0.3 \times (10^{23})^{0.5} \approx 0.3 \times 3.16 \tim
 ---
 
 ### 3. 线性回归与最小二乘：拟合缩放定律的工具
+
+> 💡 **为什么要在这里学线性回归？** 前面咱们看到缩放定律的核心公式 $L = A \cdot N^{-\alpha}$，取对数后变成 $\ln L = \ln A - \alpha \cdot \ln N$——这就是一条直线！也就是说，**缩放定律本质上是双对数空间中的线性关系**。要从前面的实验数据中拟合出 $A$ 和 $\alpha$，咱们需要线性回归和最小二乘法。它不是"额外"的数学工具，而是让缩放定律从"观察"变成"可量化规律"的关键桥梁。
 
 #### 为什么需要线性回归？
 
@@ -186,6 +192,17 @@ $$\nabla_\theta J(\theta) \approx \sum_t \nabla_\theta \ln \pi_\theta(a_t|s_t) \
 
 ---
 
+> 🗺️ **RL 在 LLM 对齐中的方法发展脉络**：在深入具体算法之前，咱们先理清 LLM 对齐的几种主流方法是怎么演化的：
+> 
+> 1. **SFT（监督微调）**：最基础的对齐方式，用"指令-回答"数据对直接训练模型。简单高效，但模型只是模仿人类写的回答，无法超越示范水平。
+> 2. **RLHF/PPO（2020 左右）**：引入奖励模型来评估回答质量，用 PPO 等 RL 算法优化策略。模型可以超越人类示范，但需要训练奖励模型和价值网络，工程复杂。
+> 3. **DPO（2023）**：Stanford 的突破——绕过奖励模型，直接用偏好数据（"A 比 B 好"）优化策略。大幅简化流程，但依赖于离线偏好数据的质量。
+> 4. **GRPO（2024）**：DeepSeek 的创新——不需要价值网络，用组内相对排名作为奖励信号。在数学推理等可验证场景特别高效。
+> 
+> 咱们接下来按这个脉络逐一展开：先看最新的 GRPO，再看理论最优雅的 DPO，最后看最经典的 PPO。每种方法都代表了不同的简化思路。
+
+---
+
 ### 5. GRPO：Group Relative Policy Optimization
 
 GRPO 是 DeepSeek-Math 提出的一种简化版策略优化方法，核心思想是：**不需要价值网络（Critic），用组内相对排名作为奖励信号**。
@@ -239,6 +256,8 @@ $$D_{\text{KL}}(\pi_\theta \| \pi_{\text{ref}}) = \mathbb{E}_{y \sim \pi_\theta}
 $$\max_{\pi_\theta} \mathbb{E}_{y \sim \pi_\theta}\left[r(x,y) - \beta \ln \frac{\pi_\theta(y|x)}{\pi_{\text{ref}}(y|x)}\right]$$
 
 **第三步：这个优化问题的闭式解**
+
+> ⚠️ **进阶数学免责声明**：这一步的推导用到了**变分法（Calculus of Variations）**，属于进阶数学内容。咱们不需要掌握变分法的完整推导过程，只需要理解结论——"带 KL 散度约束的策略优化问题，存在一个闭式解"。如果你对变分法好奇，可以搜索"变分法入门"或"最大熵强化学习"，但这对理解 DPO 的后续步骤**不是必须的**。
 
 可以证明（通过变分法，将其视为带 KL 约束的优化），最优策略为：
 
@@ -676,6 +695,20 @@ print("图片已保存到 ./images/ppo_dpo_visual.png")
 4. **Rafailov et al. (2023)** - *Direct Preference Optimization* — DPO 论文
 5. **Shao et al. (2024)** - *DeepSeekMath* — GRPO 方法
 6. **Ziegler et al. (2019)** - *Fine-Tuning Language Models from Human Preferences* — RLHF 早期工作
+
+---
+
+## 📖 本章术语速查表
+
+| 术语 | 全称 / 英文 | 简要解释 |
+|------|------------|----------|
+| **FLOPs** | Floating Point Operations | 浮点运算次数，衡量模型训练/推理所需计算量的单位。一个 7B 模型训 1T tokens 大约需要 $6 \times 7 \times 10^9 \times 10^{12} \approx 4.2 \times 10^{22}$ FLOPs。 |
+| **SFT** | Supervised Fine-Tuning | 监督微调。用"指令-回答"对进一步训练预训练模型，使其学会遵循指令。是 RLHF 对齐流程的第一步。 |
+| **配分函数** | Partition Function / $Z(x)$ | 归一化常数 $Z(x) = \sum_y \pi_{\text{ref}}(y\|x) \exp(\frac{1}{\beta}r(x,y))$，确保概率分布的总和为 1。在 DPO 推导中会被巧妙消掉。 |
+| **GAE** | Generalized Advantage Estimation | 广义优势估计，一种平衡偏差和方差的优势函数计算方法：$\hat{A}_t^{\text{GAE}} = \sum_{l=0}^{T-t}(\gamma\lambda)^l \delta_{t+l}$。$\lambda=0$ 时退化为 TD 误差，$\lambda=1$ 时退化为蒙特卡洛估计。 |
+| **KL 散度** | Kullback-Leibler Divergence | 衡量两个概率分布 $P$ 和 $Q$ 差异的一种度量：$D_{\text{KL}}(P \| Q) = \mathbb{E}_P[\ln \frac{P}{Q}]$。值域 $[0, +\infty)$，不对称。在 RLHF 中用于约束策略不要偏离参考策略太远。 |
+| **logits** | — | 模型在 softmax 之前输出的原始（未归一化）分数。softmax 将 logits 转换为概率分布：$\pi(a) = \frac{e^{\text{logit}(a)}}{\sum_{a'} e^{\text{logit}(a')}}$。 |
+| **sigmoid 函数** | Sigmoid Function | $\sigma(z) = \frac{1}{1+e^{-z}}$，将任意实数映射到 $(0,1)$ 区间。在 DPO 中用于建模偏好概率：$p(y_w \succ y_l) = \sigma(r(y_w) - r(y_l))$。 |
 
 ---
 
