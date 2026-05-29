@@ -99,6 +99,40 @@ $$P(A \cup B) = P(A) + P(B) - P(A \cap B)$$
 >
 > 💡 **一句话总结**：频率学派从数据出发，贝叶斯学派从信念+数据出发。在 LLM 领域，MLE（频率学派）和贝叶斯推断各有用武之地。
 
+#### 💻 动手验证：大数定律——频率学派说得对吗？
+
+频率学派说"掷 10000 次骰子，样本均值会趋近理论期望 3.5"。口说无凭，咱们跑一下看看——真的会收敛吗？收敛得有多快？
+
+```python
+# 文件：scripts/law_of_large_numbers.py
+"""大数定律的可视化验证：掷骰子的样本均值趋向 3.5"""
+import numpy as np
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+max_n = 10000
+rolls = np.random.randint(1, 7, size=max_n)
+cumulative_mean = np.cumsum(rolls) / np.arange(1, max_n + 1)
+
+plt.figure(figsize=(10, 5))
+plt.plot(range(1, max_n + 1), cumulative_mean, linewidth=0.8, alpha=0.8)
+plt.axhline(y=3.5, color='r', linestyle='--', linewidth=2, label='理论期望 E[X] = 3.5')
+plt.xlabel('掷骰子次数 n', fontsize=12)
+plt.ylabel('样本均值', fontsize=12)
+plt.title('大数定律验证：样本均值 → 期望值', fontsize=14)
+plt.legend(fontsize=12)
+plt.xscale('log')
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.savefig('./images/law_of_large_numbers.png', dpi=150)
+plt.show()
+print("✅ 图片已保存: ./images/law_of_large_numbers.png")
+```
+
+![大数定律验证](./images/law_of_large_numbers.png)
+
+你看这条曲线——前几十次还在上蹿下跳，但过了几百次就开始明显收紧，到几千次的时候几乎贴着 3.5 那条红线了。发现了吗？频率学派的直觉果然没错，而且收敛速度比咱们想象中还快。这也解释了为什么机器学习中 mini-batch 越大，梯度估计越稳定——背后就是这个道理。
+
 ---
 
 ## 2. 条件概率与贝叶斯定理
@@ -174,6 +208,59 @@ $$\boxed{P(A \mid B) = \frac{P(B \mid A) \cdot P(A)}{P(B)}}$$
 $$P(\text{垃圾} \mid \text{免费}) = \frac{0.8 \times 0.3}{0.8 \times 0.3 + 0.1 \times 0.7} = \frac{0.24}{0.24 + 0.07} = \frac{0.24}{0.31} \approx 0.774$$
 
 看到"免费"之后，垃圾邮件的概率从 30% 跃升到 77.4%！这就是贝叶斯更新的威力。
+
+#### 💻 动手验证：贝叶斯更新——亲眼看着信念被数据重塑
+
+上面的垃圾邮件例子是一次性的贝叶斯更新。但贝叶斯思想更精彩的地方在于：随着数据**逐步**到来，咱们的信念会越来越集中、越来越确定。好，口说无凭，咱们模拟抛一枚偏硬币（p=0.7），看看后验分布是怎么变化的。
+
+```python
+# 文件：scripts/bayesian_update.py
+"""贝叶斯更新演示：逐步观察数据，更新对硬币偏斜程度的信念"""
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import beta
+
+# 先验：Beta(1, 1) = 均匀分布（对 p 没有先验知识）
+a_prior, b_prior = 1, 1
+
+# 真实硬币：p = 0.7 的偏硬币
+true_p = 0.7
+np.random.seed(42)
+observations = np.random.binomial(1, true_p, size=50)  # 50次抛掷
+
+fig, axes = plt.subplots(2, 3, figsize=(14, 8))
+axes = axes.flatten()
+show_steps = [0, 1, 5, 10, 25, 50]
+
+x = np.linspace(0, 1, 500)
+a, b = a_prior, b_prior
+
+for idx, step in enumerate(show_steps):
+    # 更新到第 step 次观察
+    new_a = a_prior + observations[:step].sum()
+    new_b = b_prior + step - observations[:step].sum()
+    
+    ax = axes[idx]
+    ax.plot(x, beta.pdf(x, new_a, new_b), 'b-', linewidth=2)
+    ax.fill_between(x, beta.pdf(x, new_a, new_b), alpha=0.2, color='blue')
+    ax.axvline(x=true_p, color='r', linestyle='--', linewidth=1.5, label=f'真实 p={true_p}')
+    
+    mode = (new_a - 1) / (new_a + new_b - 2) if new_a > 1 and new_b > 1 else new_a / (new_a + new_b)
+    ax.set_title(f'观察 {step} 次后\n后验均值={new_a/(new_a+new_b):.3f}', fontsize=11)
+    ax.legend(fontsize=9)
+    ax.set_xlim(0, 1)
+    ax.set_xlabel('p')
+
+plt.suptitle('贝叶斯更新：随着数据增多，信念越来越集中', fontsize=14, y=1.02)
+plt.tight_layout()
+plt.savefig('./images/bayesian_update.png', dpi=150, bbox_inches='tight')
+plt.show()
+print("✅ 图片已保存: ./images/bayesian_update.png")
+```
+
+![贝叶斯更新](./images/bayesian_update.png)
+
+你看这6张子图——第0次观察时，咱们对 p 毫无了解，后验是一条平平的线（均匀分布）；到第5次观察，分布已经开始鼓起来；到第50次，蓝色曲线变成了一个又尖又窄的峰，死死锁住了真实值 p=0.7。发现了吗？数据越多，不确定性越小，信念越坚定。贝叶斯学派说的"用证据更新信念"，就是这个效果。
 
 ### 2.3 贝叶斯在 NLP 中的应用
 
@@ -255,9 +342,59 @@ $$\boxed{f(x) = \frac{1}{\sqrt{2\pi}\sigma} \exp\left(-\frac{(x-\mu)^2}{2\sigma^
 
 为什么正态分布这么重要？**中心极限定理**（后面会讲）告诉我们，大量独立随机因素的叠加效果近似正态分布。自然界和工程中，到处都是。
 
+#### 💻 动手验证：常见概率分布长什么样？
+
+前面介绍了均匀分布、二项分布、正态分布，光看公式还是有点抽象。好，咱们把它们画出来放一起对比——形状不同，但各有各的用处。
+
+```python
+# 文件：scripts/distributions.py
+"""常见概率分布可视化"""
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import stats
+
+fig, axes = plt.subplots(1, 3, figsize=(14, 4))
+
+# 1. 均匀分布
+ax = axes[0]
+x = np.linspace(-1, 2, 300)
+for a_val, b_val, color in [(0, 1, 'blue'), (0, 2, 'green')]:
+    ax.plot(x, stats.uniform.pdf(x, a_val, b_val - a_val), linewidth=2, 
+            color=color, label=f'U({a_val}, {b_val})')
+ax.set_title('均匀分布', fontsize=13)
+ax.legend()
+ax.set_ylim(0, 1.5)
+
+# 2. 二项分布
+ax = axes[1]
+x_binom = np.arange(0, 16)
+for n_val, p_val, color in [(10, 0.3, 'blue'), (10, 0.5, 'green'), (15, 0.3, 'red')]:
+    ax.bar(x_binom if n_val == 15 else np.arange(0, n_val + 1),
+           stats.binom.pmf(np.arange(0, n_val + 1), n_val, p_val),
+           alpha=0.5, color=color, label=f'Bin({n_val}, {p_val})')
+ax.set_title('二项分布', fontsize=13)
+ax.legend()
+
+# 3. 正态分布
+ax = axes[2]
+x = np.linspace(-5, 8, 300)
+for mu, sigma, color in [(0, 1, 'blue'), (2, 1, 'green'), (0, 2, 'red')]:
+    ax.plot(x, stats.norm.pdf(x, mu, sigma), linewidth=2,
+            color=color, label=f'N({mu}, {sigma}²)')
+ax.set_title('正态分布', fontsize=13)
+ax.legend()
+
+plt.tight_layout()
+plt.savefig('./images/distributions.png', dpi=150)
+plt.show()
+print("✅ 图片已保存: ./images/distributions.png")
+```
+
 ![常见概率分布](./images/gaussian_distribution.png)
 
 *图：均匀分布、二项分布、正态分布的可视化*
+
+你看这三组图——均匀分布像一段"城墙"，方方正正没有偏好；二项分布像一座小山丘，峰值在 np 附近；正态分布则是经典的钟形曲线，改均值让它平移，改标准差让它胖瘦变化。三种分布形状各异，但在各自的场景中都是"最自然"的选择。
 
 ---
 
@@ -343,9 +480,55 @@ $$\frac{\bar{X} - \mu}{\sigma / \sqrt{n}} \xrightarrow{d} N(0, 1)$$
 
 这就是为什么正态分布无处不在——不是因为它描述了所有现象，而是因为很多东西都是"大量小因素的叠加"。
 
+#### 💻 动手验证：中心极限定理——均匀分布的均值怎么就变正态了？
+
+CLT 说的是"不管原始分布长啥样，样本均值都趋向正态"。这听起来有点不可思议——咱们从最"不正态"的均匀分布出发，看看随着每组样本量 n 的增大，均值分布会发生什么变化。
+
+```python
+# 文件：scripts/clt_demo.py
+"""中心极限定理可视化：均匀分布 → 正态分布"""
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import stats
+
+np.random.seed(42)
+sample_sizes = [1, 2, 5, 30]
+num_experiments = 10000
+
+fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+axes = axes.flatten()
+
+for idx, n in enumerate(sample_sizes):
+    # 每次实验：从均匀分布 U(0,1) 中抽 n 个样本，算均值
+    samples = np.random.uniform(0, 1, size=(num_experiments, n))
+    means = samples.mean(axis=1)
+    
+    ax = axes[idx]
+    ax.hist(means, bins=50, density=True, alpha=0.7, color='steelblue', edgecolor='white')
+    
+    # 叠加理论正态分布曲线
+    mu_theory = 0.5  # U(0,1) 的均值
+    sigma_theory = np.sqrt(1/12) / np.sqrt(n)  # U(0,1) 的方差是 1/12
+    x = np.linspace(means.min(), means.max(), 200)
+    ax.plot(x, stats.norm.pdf(x, mu_theory, sigma_theory), 'r-', linewidth=2, label='正态拟合')
+    
+    ax.set_title(f'n = {n}', fontsize=13)
+    ax.set_xlabel('样本均值')
+    ax.set_ylabel('密度')
+    ax.legend(fontsize=10)
+
+plt.suptitle('中心极限定理：均匀分布的样本均值 → 正态分布', fontsize=14, y=1.02)
+plt.tight_layout()
+plt.savefig('./images/clt_demo.png', dpi=150, bbox_inches='tight')
+plt.show()
+print("✅ 图片已保存: ./images/clt_demo.png")
+```
+
 ![中心极限定理演示](./images/clt_demo.png)
 
 *图：从均匀分布抽样，样本均值的分布随 n 增大趋向正态*
+
+发现了吗？n=1 时还是均匀分布的方形，n=2 就开始鼓起来了，n=5 已经像个钟形，n=30 的时候红色正态拟合曲线和蓝色直方图几乎完美重合。这就是 CLT 的魔力——就算你从最"平坦"的均匀分布里抽样，只要样本量够大，均值分布就乖乖变成正态。这也解释了为什么正态分布在统计学中地位这么高。
 
 ### 5.3 为什么训练能收敛？
 
@@ -398,6 +581,40 @@ $$\boxed{\hat{p}_{MLE} = \frac{\sum x_i}{n} = \frac{\text{成功次数}}{\text{�
 
 抛 10 次出 7 次正面？$\hat{p} = 7/10 = 0.7$。直觉和数学完美吻合！✅
 
+#### 💻 动手验证：似然函数长什么样？MLE 的峰值真的在 0.7 吗？
+
+推导过程严谨归严谨，但咱们还是画出来看看——把 n=10 次、k=7 次正面这个场景的似然函数画出来，红色虚线标出 MLE 估计值 p̂=0.7，看它是不是真的在峰顶。
+
+```python
+# 文件：scripts/mle_demo.py
+"""MLE 似然函数可视化"""
+import numpy as np
+import matplotlib.pyplot as plt
+
+p_range = np.linspace(0.01, 0.99, 200)
+n_trials, n_heads = 10, 7
+likelihood = p_range**n_heads * (1 - p_range)**(n_trials - n_heads)
+log_likelihood = n_heads * np.log(p_range) + (n_trials - n_heads) * np.log(1 - p_range)
+
+fig, ax = plt.subplots(figsize=(8, 5))
+ax.plot(p_range, likelihood, 'b-', linewidth=2, label='似然函数 L(p)')
+ax.axvline(x=0.7, color='r', linestyle='--', linewidth=1.5, label=f'MLE: p̂ = {n_heads}/{n_trials} = 0.7')
+ax.set_title(f'极大似然估计 (n={n_trials}, k={n_heads})', fontsize=13)
+ax.set_xlabel('p', fontsize=12)
+ax.set_ylabel('似然 L(p)', fontsize=12)
+ax.legend(fontsize=11)
+plt.tight_layout()
+plt.savefig('./images/mle_cross_entropy.png', dpi=150)
+plt.show()
+print("✅ 图片已保存: ./images/mle_cross_entropy.png")
+```
+
+![MLE与交叉熵](./images/mle_cross_entropy.png)
+
+*图：MLE 估计过程与交叉熵损失的对应关系——训练语言模型本质上就是在做极大似然估计*
+
+果然如此！似然函数在 p=0.7 处取到最大值。这个蓝色曲线的峰值就是咱们的 MLE 估计——"让观测数据出现概率最大的那个参数"。你看，数学推导和直觉完全一致：抛10次出了7次正面，最靠谱的估计就是 p=0.7。
+
 ### 6.3 MLE 和语言模型
 
 **语言模型训练本质上就是 MLE！**
@@ -422,207 +639,9 @@ $$\boxed{\text{交叉熵损失} = -\frac{1}{N}\sum_{t=1}^{N} \log P(w_t \mid w_{
 
 ---
 
-## 💻 代码验证
-
-### 实验 1：大数定律验证
-
-```python
-# 文件：scripts/law_of_large_numbers.py
-"""大数定律的可视化验证：掷骰子的样本均值趋向 3.5"""
-import numpy as np
-import matplotlib.pyplot as plt
-
-np.random.seed(42)
-max_n = 10000
-rolls = np.random.randint(1, 7, size=max_n)
-cumulative_mean = np.cumsum(rolls) / np.arange(1, max_n + 1)
-
-plt.figure(figsize=(10, 5))
-plt.plot(range(1, max_n + 1), cumulative_mean, linewidth=0.8, alpha=0.8)
-plt.axhline(y=3.5, color='r', linestyle='--', linewidth=2, label='理论期望 E[X] = 3.5')
-plt.xlabel('掷骰子次数 n', fontsize=12)
-plt.ylabel('样本均值', fontsize=12)
-plt.title('大数定律验证：样本均值 → 期望值', fontsize=14)
-plt.legend(fontsize=12)
-plt.xscale('log')
-plt.grid(True, alpha=0.3)
-plt.tight_layout()
-plt.savefig('./images/law_of_large_numbers.png', dpi=150)
-plt.show()
-print("✅ 图片已保存: ./images/law_of_large_numbers.png")
-```
-
-![大数定律验证](./images/law_of_large_numbers.png)
-
-### 实验 2：中心极限定理可视化
-
-```python
-# 文件：scripts/clt_demo.py
-"""中心极限定理可视化：均匀分布 → 正态分布"""
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy import stats
-
-np.random.seed(42)
-sample_sizes = [1, 2, 5, 30]
-num_experiments = 10000
-
-fig, axes = plt.subplots(2, 2, figsize=(12, 8))
-axes = axes.flatten()
-
-for idx, n in enumerate(sample_sizes):
-    # 每次实验：从均匀分布 U(0,1) 中抽 n 个样本，算均值
-    samples = np.random.uniform(0, 1, size=(num_experiments, n))
-    means = samples.mean(axis=1)
-    
-    ax = axes[idx]
-    ax.hist(means, bins=50, density=True, alpha=0.7, color='steelblue', edgecolor='white')
-    
-    # 叠加理论正态分布曲线
-    mu_theory = 0.5  # U(0,1) 的均值
-    sigma_theory = np.sqrt(1/12) / np.sqrt(n)  # U(0,1) 的方差是 1/12
-    x = np.linspace(means.min(), means.max(), 200)
-    ax.plot(x, stats.norm.pdf(x, mu_theory, sigma_theory), 'r-', linewidth=2, label='正态拟合')
-    
-    ax.set_title(f'n = {n}', fontsize=13)
-    ax.set_xlabel('样本均值')
-    ax.set_ylabel('密度')
-    ax.legend(fontsize=10)
-
-plt.suptitle('中心极限定理：均匀分布的样本均值 → 正态分布', fontsize=14, y=1.02)
-plt.tight_layout()
-plt.savefig('./images/clt_demo.png', dpi=150, bbox_inches='tight')
-plt.show()
-print("✅ 图片已保存: ./images/clt_demo.png")
-```
-
-### 实验 3：贝叶斯更新
-
-```python
-# 文件：scripts/bayesian_update.py
-"""贝叶斯更新演示：逐步观察数据，更新对硬币偏斜程度的信念"""
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.stats import beta
-
-# 先验：Beta(1, 1) = 均匀分布（对 p 没有先验知识）
-a_prior, b_prior = 1, 1
-
-# 真实硬币：p = 0.7 的偏硬币
-true_p = 0.7
-np.random.seed(42)
-observations = np.random.binomial(1, true_p, size=50)  # 50次抛掷
-
-fig, axes = plt.subplots(2, 3, figsize=(14, 8))
-axes = axes.flatten()
-show_steps = [0, 1, 5, 10, 25, 50]
-
-x = np.linspace(0, 1, 500)
-a, b = a_prior, b_prior
-
-for idx, step in enumerate(show_steps):
-    # 更新到第 step 次观察
-    new_a = a_prior + observations[:step].sum()
-    new_b = b_prior + step - observations[:step].sum()
-    
-    ax = axes[idx]
-    ax.plot(x, beta.pdf(x, new_a, new_b), 'b-', linewidth=2)
-    ax.fill_between(x, beta.pdf(x, new_a, new_b), alpha=0.2, color='blue')
-    ax.axvline(x=true_p, color='r', linestyle='--', linewidth=1.5, label=f'真实 p={true_p}')
-    
-    mode = (new_a - 1) / (new_a + new_b - 2) if new_a > 1 and new_b > 1 else new_a / (new_a + new_b)
-    ax.set_title(f'观察 {step} 次后\n后验均值={new_a/(new_a+new_b):.3f}', fontsize=11)
-    ax.legend(fontsize=9)
-    ax.set_xlim(0, 1)
-    ax.set_xlabel('p')
-
-plt.suptitle('贝叶斯更新：随着数据增多，信念越来越集中', fontsize=14, y=1.02)
-plt.tight_layout()
-plt.savefig('./images/bayesian_update.png', dpi=150, bbox_inches='tight')
-plt.show()
-print("✅ 图片已保存: ./images/bayesian_update.png")
-```
-
-![贝叶斯更新](./images/bayesian_update.png)
-
-### 实验 4：常见概率分布可视化
-
-```python
-# 文件：scripts/distributions.py
-"""常见概率分布可视化"""
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy import stats
-
-fig, axes = plt.subplots(2, 2, figsize=(12, 8))
-
-# 1. 均匀分布
-ax = axes[0, 0]
-x = np.linspace(-1, 2, 300)
-for a_val, b_val, color in [(0, 1, 'blue'), (0, 2, 'green')]:
-    ax.plot(x, stats.uniform.pdf(x, a_val, b_val - a_val), linewidth=2, 
-            color=color, label=f'U({a_val}, {b_val})')
-ax.set_title('均匀分布', fontsize=13)
-ax.legend()
-ax.set_ylim(0, 1.5)
-
-# 2. 二项分布
-ax = axes[0, 1]
-x_binom = np.arange(0, 16)
-for n_val, p_val, color in [(10, 0.3, 'blue'), (10, 0.5, 'green'), (15, 0.3, 'red')]:
-    ax.bar(x_binom if n_val == 15 else np.arange(0, n_val + 1),
-           stats.binom.pmf(np.arange(0, n_val + 1), n_val, p_val),
-           alpha=0.5, color=color, label=f'Bin({n_val}, {p_val})')
-ax.set_title('二项分布', fontsize=13)
-ax.legend()
-
-# 3. 正态分布
-ax = axes[1, 0]
-x = np.linspace(-5, 8, 300)
-for mu, sigma, color in [(0, 1, 'blue'), (2, 1, 'green'), (0, 2, 'red')]:
-    ax.plot(x, stats.norm.pdf(x, mu, sigma), linewidth=2,
-            color=color, label=f'N({mu}, {sigma}²)')
-ax.set_title('正态分布', fontsize=13)
-ax.legend()
-
-# 4. MLE 演示：伯努利似然函数
-ax = axes[1, 1]
-p_range = np.linspace(0.01, 0.99, 200)
-n_trials, n_heads = 10, 7
-likelihood = p_range**n_heads * (1 - p_range)**(n_trials - n_heads)
-log_likelihood = n_heads * np.log(p_range) + (n_trials - n_heads) * np.log(1 - p_range)
-
-ax.plot(p_range, likelihood, 'b-', linewidth=2, label='似然函数 L(p)')
-ax.axvline(x=0.7, color='r', linestyle='--', linewidth=1.5, label=f'MLE: p̂ = {n_heads}/{n_trials} = 0.7')
-ax.set_title(f'极大似然估计 (n={n_trials}, k={n_heads})', fontsize=13)
-ax.set_xlabel('p')
-ax.legend()
-
-plt.tight_layout()
-plt.savefig('./images/distributions.png', dpi=150)
-plt.show()
-print("✅ 图片已保存: ./images/distributions.png")
-```
-
-![MLE与交叉熵](./images/mle_cross_entropy.png)
-
-*图：MLE 估计过程与交叉熵损失的对应关系——训练语言模型本质上就是在做极大似然估计*
-
-### 运行所有实验
-
-```bash
-cd /tmp/llm-math-foundations/chapter03-probability
-python scripts/law_of_large_numbers.py
-python scripts/clt_demo.py
-python scripts/bayesian_update.py
-python scripts/distributions.py
-```
-
----
-
 ## 🎯 LLM 关联总结
 
-让我们把本章所有概念串联到 LLM：
+把本章所有概念串联到 LLM：
 
 | 概率概念 | LLM 中的对应 |
 |---------|-------------|

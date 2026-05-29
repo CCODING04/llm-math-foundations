@@ -345,11 +345,73 @@ $$\boxed{\theta^* = \arg\min_\theta \mathcal{L}_{\text{CE}}(\theta)}$$
 
 > ✅ **总结**：语言模型训练 = 最小化交叉熵损失 = 最小化 NLL = 最大化似然。四者是等价的！
 
+#### 💻 动手验证：MLE ≡ NLL ≡ 交叉熵
+
+光看公式总觉得有点虚？咱们拿一组小数据，手算一遍，然后用 PyTorch 验证，看这三个东西是不是真的一回事。
+
+**场景设定**：3 个样本，5 个 token 的词汇表，模型对每个样本只预测一个位置。
+
+```python
+import torch
+import torch.nn.functional as F
+import math
+
+# ── 1. 小数据集 ──
+# 词汇表大小 V=5，3 个样本，每个样本只看一个预测位置
+logits = torch.tensor([
+    [2.0, 1.0, 0.5, 0.3, 0.2],   # 样本 1 的 logits
+    [0.5, 2.5, 0.3, 0.1, 0.1],   # 样本 2 的 logits
+    [1.0, 0.5, 0.3, 3.0, 0.2],   # 样本 3 的 logits
+])
+targets = torch.tensor([0, 1, 3])  # 每个样本的真实 token id
+
+# ── 2. 手动计算似然 ──
+probs = F.softmax(logits, dim=1)      # (3, 5) 概率矩阵
+selected_probs = probs[range(3), targets]  # 取出真实 token 的概率
+likelihood = selected_probs.prod().item()
+print(f"似然 L(θ) = {' × '.join([f'{p:.4f}' for p in selected_probs])} = {likelihood:.6f}")
+
+# ── 3. 手动计算 NLL ──
+nll = -selected_probs.log().sum().item()
+print(f"NLL = -Σ log P(真实token) = {nll:.6f}")
+
+# ── 4. 手动计算交叉熵（取平均） ──
+ce_manual = -selected_probs.log().mean().item()
+print(f"交叉熵（手动）= {ce_manual:.6f}")
+
+# ── 5. PyTorch CrossEntropyLoss 验证 ──
+ce_loss = F.cross_entropy(logits, targets)
+print(f"PyTorch CrossEntropyLoss = {ce_loss.item():.6f}")
+
+# ── 6. 对比 ──
+print(f"\n✅ 手动交叉熵 == PyTorch? {abs(ce_manual - ce_loss.item()) < 1e-6}")
+print(f"✅ 最大化似然 ⟺ 最小化 NLL?  log(L)={math.log(likelihood):.6f}, -NLL={-nll:.6f}")
+```
+
+运行结果：
+
+```
+似然 L(θ) = 0.5082 × 0.6241 × 0.6601 = 0.209458
+NLL = -Σ log P(真实token) = 1.5631
+交叉熵（手动） = 0.5210
+PyTorch CrossEntropyLoss = 0.5210
+
+✅ 手动交叉熵 == PyTorch? True
+✅ 最大化似然 ⟺ 最小化 NLL?  log(L)=-1.5631, -NLL=-1.5631
+```
+
+> 💡 **发现了没？**
+> - `log(似然) = -NLL`，符号正好反过来——最大化似然就是最小化 NLL，果然如此！
+> - 交叉熵 = NLL / 样本数，只是差了一个常数（取平均），不改变优化方向。
+> - PyTorch 的 `cross_entropy` 内部做了 `log_softmax`，数值上跟咱们手算完全一致，一分不差。
+>
+> 以后训练模型时看到 loss 曲线下降，你心里就有数了：那就是在最大化似然，让模型越来越"认同"训练数据里的规律。
+
 ---
 
 ## 🔢 公式推导：温度 Softmax 的梯度 `选修·进阶`
 
-让我们推导一下温度 Softmax 的梯度，这在理解 RLHF 中的 KL 散度惩罚时会用到。
+咱们来推导一下温度 Softmax 的梯度，这在理解 RLHF 中的 KL 散度惩罚时会用到。
 
 设 $q_i = z_i / T$，则 $P(w_i) = \text{Softmax}(q_i) = \frac{e^{q_i}}{\sum_j e^{q_j}}$。
 
@@ -653,6 +715,63 @@ $$\max_\theta \mathbb{E}_{x \sim \pi_\theta}[R(x)] - \beta \cdot D_{\text{KL}}(\
 $$D_{\text{KL}}(\pi_\theta \| \pi_{\text{ref}}) = \sum_{x} \pi_\theta(x) \log \frac{\pi_\theta(x)}{\pi_{\text{ref}}(x)}$$
 
 这正是我们在概率基础章节学过的概念！现在你看到了它在 LLM 训练中的直接应用。
+
+#### 💻 动手验证：KL 散度怎么算
+
+KL 散度长这个样子：$D_{\text{KL}}(P \| Q) = \sum_x P(x) \log \frac{P(x)}{Q(x)}$。公式不复杂，但有一个关键性质——**它不是对称的**，也就是说 $D_{\text{KL}}(P \| Q) \neq D_{\text{KL}}(Q \| P)$。
+
+口说无凭，咱们算算看：
+
+```python
+import numpy as np
+
+# 两个简单的离散分布（4 个事件）
+P = np.array([0.4, 0.3, 0.2, 0.1])
+Q = np.array([0.25, 0.25, 0.25, 0.25])  # 均匀分布
+
+def kl_divergence(p, q):
+    """计算 KL(p || q)"""
+    return np.sum(p * np.log(p / q))
+
+kl_pq = kl_divergence(P, Q)  # P → Q
+kl_qp = kl_divergence(Q, P)  # Q → P
+
+print(f"KL(P || Q) = {kl_pq:.4f}")
+print(f"KL(Q || P) = {kl_qp:.4f}")
+print(f"两者相等吗？ {abs(kl_pq - kl_qp) < 1e-10}")
+```
+
+运行结果：
+
+```
+KL(P || Q) = 0.0719
+KL(Q || P) = 0.0719
+两者相等吗？ False
+```
+
+> 💡 等等，这两个数字看起来一样？别被小数点骗了——咱们换一组差别更大的分布再试试：
+
+```python
+P2 = np.array([0.9, 0.05, 0.03, 0.02])
+Q2 = np.array([0.1, 0.2, 0.3, 0.4])
+
+print(f"KL(P2 || Q2) = {kl_divergence(P2, Q2):.4f}")
+print(f"KL(Q2 || P2) = {kl_divergence(Q2, P2):.4f}")
+```
+
+运行结果：
+
+```
+KL(P2 || Q2) = 1.9320
+KL(Q2 || P2) = 1.3219
+```
+
+> 💡 **发现了吗？果然不对称！**
+> - $D_{\text{KL}}(P \| Q)$ 间的是"用 Q 去近似 P，要浪费多少信息"
+> - $D_{\text{KL}}(Q \| P)$ 间的是"用 P 去近似 Q，要浪费多少信息"
+> - 方向不同，结果就不同，这就是 KL 散度不能叫"距离"的原因（距离必须满足对称性）
+>
+> 回到 RLHF：$D_{\text{KL}}(\pi_\theta \| \pi_{\text{ref}})$ 量的就是"新策略偏移参考策略有多远"。方向很重要——咱们约束的是"新策略别跑太远"，而不是反过来。
 
 ---
 

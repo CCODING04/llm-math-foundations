@@ -123,6 +123,27 @@ $$f'(x) = 3 \cdot 4x^3 - 2 \cdot 2x + 5 \cdot 1 - 0 = 12x^3 - 4x + 5$$
 
 $$f'(x) = (e^x)'\sin x + e^x(\sin x)' = e^x\sin x + e^x\cos x = e^x(\sin x + \cos x)$$
 
+#### 💻 动手验证：数值导数
+
+好，口说无凭，咱们用导数的原始定义来算一算——取一个极小的 $\Delta x$，看看算出来的数值导数跟解析公式是不是吻合。
+
+```python
+import numpy as np
+
+# 数值导数（用定义来算）
+def numerical_derivative(f, x, h=1e-5):
+    return (f(x + h) - f(x - h)) / (2 * h)
+
+# 测试几个函数
+print("=== 数值导数验证 ===")
+print(f"x² 在 x=3 处的导数: 数值={numerical_derivative(lambda x: x**2, 3):.6f}, 解析=6.000000")
+print(f"sin(x) 在 x=π/4 处的导数: 数值={numerical_derivative(np.sin, np.pi/4):.6f}, 解析={np.cos(np.pi/4):.6f}")
+print(f"e^x 在 x=1 处的导数: 数值={numerical_derivative(np.exp, 1):.6f}, 解析={np.exp(1):.6f}")
+print(f"ln(x) 在 x=2 处的导数: 数值={numerical_derivative(np.log, 2):.6f}, 解析={1/2:.6f}")
+```
+
+你看，数值导数和解析公式给出的结果几乎完全一致（差异在小数点后 6 位以内）。咱们用的「中心差分」`(f(x+h) - f(x-h)) / 2h` 比单侧差分更精确，这也是工程里最常用的数值求导方式。发现了吗？那套看起来抽象的「极限 → 导数」定义，写成代码就这么几行——数学和代码本来就是一回事。
+
 ---
 
 ## 2.3 偏导数 —— 多变量世界的变化率
@@ -264,6 +285,27 @@ $$\frac{\partial L}{\partial y} = \frac{\partial L}{\partial u}\frac{\partial u}
 
 > 💡 **关键洞察**：反向传播 = 链式法则的逐层应用，从输出往回「传递」导数。每一层只需要知道「上一层传来的梯度」和「本层的局部导数」，就能算出本层参数的梯度。
 
+#### 💻 动手验证：链式法则
+
+上面推导了 $y = \sin(e^x)$ 的导数应该是 $\cos(e^x) \cdot e^x$，对吧？咱们用数值导数来交叉验证一下——如果两种完全不同的方法给出一样的答案，那就可以放心了。
+
+```python
+# y = sin(e^x), 链式法则说 dy/dx = cos(e^x) * e^x
+def composite_func(x):
+    return np.sin(np.exp(x))
+
+def chain_rule_derivative(x):
+    return np.cos(np.exp(x)) * np.exp(x)
+
+x_test = 1.0
+print("\n=== 链式法则验证 ===")
+print(f"d/dx[sin(e^x)] 在 x={x_test}:")
+print(f"  数值导数: {numerical_derivative(composite_func, x_test):.6f}")
+print(f"  链式法则: {chain_rule_derivative(x_test):.6f}")
+```
+
+有没有发现？数值导数和链式法则推导出的解析结果完全吻合——小数点后 6 位一模一样。这就是链式法则的威力：再复杂的复合函数，只要一层一层拆开，每一步都是简单的求导再乘起来。
+
 ---
 
 ## 2.5 梯度 —— 指引方向的指南针
@@ -311,6 +353,30 @@ $$w_2^{\text{new}} = 1 - 0.1 \times 4 = 0.6$$
 函数值从 $1 + 2 = 3$ 降到了 $0.64 + 0.72 = 1.36$。✅ 确实在下降！
 
 重复这个过程很多次，就会收敛到 $(0, 0)$——最小值点。
+
+#### 💻 动手验证：梯度下降全过程
+
+刚才咱们手动走了一步，现在来看看连续走 50 步会发生什么——是不是真的能一路滑到谷底？
+
+```python
+# 用梯度下降求 f(w1, w2) = w1² + 2w2² 的最小值
+w = np.array([1.0, 1.0])
+eta = 0.1
+trajectory = [w.copy()]
+
+print("=== 梯度下降过程 ===")
+for step in range(50):
+    grad = np.array([2*w[0], 4*w[1]])   # 梯度
+    w = w - eta * grad                   # 更新
+    trajectory.append(w.copy())
+    if step < 5 or step % 10 == 0:
+        f_val = w[0]**2 + 2*w[1]**2
+        print(f"  Step {step+1:2d}: w=({w[0]:.4f}, {w[1]:.4f}), f(w)={f_val:.6f}")
+
+print(f"\n  最终: w=({w[0]:.6f}, {w[1]:.6f}), f(w)={w[0]**2 + 2*w[1]**2:.10f}")
+```
+
+果然如此！参数一路从 $(1, 1)$ 趋近 $(0, 0)$，函数值从 3 一路跌到近乎 0。有意思的是 $w_2$ 收敛得比 $w_1$ 快——因为 $2w_2^2$ 的梯度（$4w_2$）比 $w_1^2$ 的梯度（$2w_1$）更大，每步走的幅度更大。这就是为什么在训练神经网络时，不同参数的收敛速度可以差很多——梯度的「坡度」不一样嘛。
 
 ---
 
@@ -363,6 +429,32 @@ $f(x) = 2x + 1$ 是一条直线，曲线下面积就是梯形面积：
 - 梯形面积 $= \frac{(3 + 7)}{2} \times (3 - 1) = \frac{10}{2} \times 2 = 10$ ✅
 
 > 🎉 两种方法结果一致！这就是牛顿-莱布尼茨公式的威力——不需要画无数个矩形，只需要找到原函数，代入端点值一减就完事。
+
+#### 💻 动手验证：数值积分
+
+上面用手算和梯形面积都得到了 10，咱们再用代码的「矩形逼近法」来验证——把区间切成很多小矩形，看看面积是不是趋近于解析结果。
+
+```python
+# 数值积分：用矩形逼近法计算定积分
+def numerical_integral(f, a, b, n=10000):
+    """将 [a, b] 分成 n 个小矩形，求和逼近定积分"""
+    dx = (b - a) / n
+    x_vals = np.linspace(a + dx/2, b - dx/2, n)  # 取每个矩形中点
+    return np.sum(f(x_vals) * dx)
+
+# 计算 ∫₁³ (2x + 1) dx
+f = lambda x: 2*x + 1
+analytical = 10  # 手算结果
+numerical = numerical_integral(f, 1, 3)
+
+print("=== 定积分数值验证 ===")
+print(f"∫₁³ (2x+1) dx")
+print(f"  解析结果: {analytical}")
+print(f"  数值积分: {numerical:.6f}")
+print(f"  误差: {abs(numerical - analytical):.2e}")
+```
+
+你看，10000 个小矩形就能把面积算到小数点后好几位都精确。牛顿-莱布尼茨公式和数值方法殊途同归，答案是 10 没跑了。这个「切矩形」的思路其实就是积分定义的本意——只不过数学家用极限把「无数个无穷小的矩形」变成了优雅的公式，而代码老老实实切有限个矩形，也能得到足够好的答案。
 
 ### 2.6.3 积分在概率中的应用
 
@@ -436,43 +528,7 @@ $$z = W_1 x, \quad h = \sigma(z), \quad \hat{y} = W_2 h, \quad L = \frac{1}{2}(\
 
 ---
 
-## 2.8 💻 代码验证
-
-### 2.8.1 数值验证导数
-
-```python
-import numpy as np
-
-# 数值导数（用定义来算）
-def numerical_derivative(f, x, h=1e-5):
-    return (f(x + h) - f(x - h)) / (2 * h)
-
-# 测试几个函数
-print("=== 数值导数验证 ===")
-print(f"x² 在 x=3 处的导数: 数值={numerical_derivative(lambda x: x**2, 3):.6f}, 解析=6.000000")
-print(f"sin(x) 在 x=π/4 处的导数: 数值={numerical_derivative(np.sin, np.pi/4):.6f}, 解析={np.cos(np.pi/4):.6f}")
-print(f"e^x 在 x=1 处的导数: 数值={numerical_derivative(np.exp, 1):.6f}, 解析={np.exp(1):.6f}")
-print(f"ln(x) 在 x=2 处的导数: 数值={numerical_derivative(np.log, 2):.6f}, 解析={1/2:.6f}")
-```
-
-### 2.8.2 验证链式法则
-
-```python
-# y = sin(e^x), 链式法则说 dy/dx = cos(e^x) * e^x
-def composite_func(x):
-    return np.sin(np.exp(x))
-
-def chain_rule_derivative(x):
-    return np.cos(np.exp(x)) * np.exp(x)
-
-x_test = 1.0
-print("\n=== 链式法则验证 ===")
-print(f"d/dx[sin(e^x)] 在 x={x_test}:")
-print(f"  数值导数: {numerical_derivative(composite_func, x_test):.6f}")
-print(f"  链式法则: {chain_rule_derivative(x_test):.6f}")
-```
-
-### 2.8.3 可视化脚本
+## 2.8 📊 可视化脚本
 
 所有可视化脚本都保存在 `scripts/` 目录下：
 
