@@ -52,6 +52,8 @@ $$\lim_{x \to 0} \frac{\sin x}{x} = 1$$
 
 > 💡 **为什么极限重要？** 因为导数的定义就建立在极限之上——它是微积分最底层的砖块。
 
+有了极限这个工具，接下来我们就可以定义导数了——它本质上就是一个特殊的极限。
+
 ---
 
 ## 2.2 导数 —— 瞬间变化的度量
@@ -151,6 +153,14 @@ $$\frac{\partial f}{\partial x} = 6xy$$
 对 $y$ 求偏导（把 $x$ 当常数）：
 $$\frac{\partial f}{\partial y} = 3x^2 + 3y^2$$
 
+### Sigmoid 函数
+
+在神经网络中经常出现的 sigmoid 函数定义为：
+
+$$\sigma(z) = \frac{1}{1 + e^{-z}}$$
+
+把任意数压到 0~1 之间的函数，叫 **sigmoid 函数**。它在神经网络中用作激活函数，输出可以解释为概率。
+
 ### 在神经网络中
 
 一个简单的神经元：$z = w_1 x_1 + w_2 x_2 + b$，激活后 $a = \sigma(z)$，损失 $L = (a - y)^2$
@@ -198,6 +208,17 @@ $$\frac{dy}{dx} = \frac{dy}{du} \cdot \frac{du}{dx} = \cos(e^x) \cdot e^x$$
 
 $$\frac{\partial L}{\partial x} = \frac{\partial L}{\partial u}\frac{\partial u}{\partial x} + \frac{\partial L}{\partial v}\frac{\partial v}{\partial x}$$
 
+### 📝 例题：多变量链式法则
+
+**设 $L = (3x + 2y)^2$，求 $\frac{\partial L}{\partial x}$**
+
+令 $u = 3x + 2y$，则 $L = u^2$。
+
+由多变量链式法则：
+$$\frac{\partial L}{\partial x} = \frac{\partial L}{\partial u} \cdot \frac{\partial u}{\partial x} = 2u \cdot 3 = 2(3x + 2y) \cdot 3 = 6(3x + 2y)$$
+
+验证：展开 $L = 9x^2 + 12xy + 4y^2$，直接求偏导 $\frac{\partial L}{\partial x} = 18x + 12y = 6(3x + 2y)$。✅ 一致！
+
 ### 2.4.4 链式法则与反向传播 🧠
 
 这就是反向传播的数学基础！看一个简单的前向传播：
@@ -214,7 +235,7 @@ $$\frac{\partial L}{\partial x} = \frac{\partial L}{\partial u}\frac{\partial u}
 
 **反向传播**（从右到左求导，用链式法则）：
 1. $\frac{\partial L}{\partial a} = 2(a - y)$
-2. $\frac{\partial L}{\partial z} = \frac{\partial L}{\partial a} \cdot \frac{\partial a}{\partial z} = 2(a - y) \cdot \mathbb{1}_{z>0}$
+2. $\frac{\partial L}{\partial z} = \frac{\partial L}{\partial a} \cdot \frac{\partial a}{\partial z} = 2(a - y) \cdot \mathbb{1}_{z>0}$（其中 $\mathbb{1}_{z>0}$ 是指示函数，$z>0$ 时等于 1，否则等于 0）
 3. $\frac{\partial L}{\partial w} = \frac{\partial L}{\partial z} \cdot \frac{\partial z}{\partial w} = 2(a - y) \cdot \mathbb{1}_{z>0} \cdot x$
 
 最后一步就是用来更新权重 $w$ 的梯度！
@@ -231,6 +252,8 @@ $$\frac{\partial L}{\partial x} = \frac{\partial L}{\partial u}\frac{\partial u}
 
 $$\nabla f = \left(\frac{\partial f}{\partial x_1}, \frac{\partial f}{\partial x_2}, \ldots, \frac{\partial f}{\partial x_n}\right)$$
 
+> 💡 $\nabla$（读作 nabla，纳布拉）是一个类似于倒三角的算子符号。
+
 ### 梯度的三个重要性质
 
 1. **方向**：梯度指向函数值**增长最快**的方向
@@ -245,7 +268,7 @@ $$\nabla f = \left(\frac{\partial f}{\partial x_1}, \frac{\partial f}{\partial x
 
 $$w_{\text{new}} = w_{\text{old}} - \eta \cdot \nabla_w L$$
 
-其中 $\eta$（eta）是**学习率**——你每一步迈多大。
+其中 $\eta$（读作「艾塔」）是**学习率**——你每一步迈多大。
 
 - $\eta$ 太大：步子迈太大，跳过最低点，来回震荡 🏃‍♂️💨
 - $\eta$ 太小：走得太慢，训练时间太长 🐢
@@ -303,6 +326,17 @@ $$\int_a^b f(x)\,dx = F(b) - F(a)$$
 >
 > ![定积分的可视化](./images/integral_area.png)
 
+### 📝 例题：手算一个定积分
+
+**计算 $\int_0^2 3x^2\,dx$**
+
+**第一步**：找原函数。$\int 3x^2\,dx = x^3 + C$（因为 $(x^3)' = 3x^2$）。
+
+**第二步**：代入上下限（牛顿-莱布尼茨公式）：
+$$\int_0^2 3x^2\,dx = \left[x^3\right]_0^2 = 2^3 - 0^3 = 8$$
+
+所以曲线 $y = 3x^2$ 在 $[0, 2]$ 下的面积是 8。 ✅
+
 ### 2.6.3 积分在概率中的应用
 
 在 LLM 中，模型输出的本质是**概率分布**。积分和概率密不可分：
@@ -320,6 +354,8 @@ $$E[X] = \int_{-\infty}^{+\infty} x \cdot p(x)\,dx$$
 **方差**（Variance）：
 $$\text{Var}(X) = E[(X - \mu)^2] = \int_{-\infty}^{+\infty} (x - \mu)^2 p(x)\,dx$$
 
+其中 $\mu$（读作「缪」）表示均值/期望。
+
 在 LLM 训练中，损失函数本质上也是一种期望——我们对所有训练样本的损失取平均。
 
 ---
@@ -327,6 +363,8 @@ $$\text{Var}(X) = E[(X - \mu)^2] = \int_{-\infty}^{+\infty} (x - \mu)^2 p(x)\,dx
 ## 2.7 🔢 公式推导：不跳步
 
 ### 推导 1：为什么梯度指向最快上升方向？
+
+> 🎨 **直觉铺垫**：两个向量点积最大时就是方向相同的时候。所以要想让 $\nabla f \cdot \mathbf{u}$ 最大，$\mathbf{u}$ 应该和 $\nabla f$ 方向一致。
 
 设当前位置 $\mathbf{w}$，走一步 $\Delta\mathbf{w}$（方向向量 $\mathbf{u}$，$|\mathbf{u}|=1$，步长 $\alpha$）：
 

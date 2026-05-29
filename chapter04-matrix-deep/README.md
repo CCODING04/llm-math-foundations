@@ -60,6 +60,8 @@ $$\det(A - \lambda I) = 0$$
 
 这就是**特征方程**。解这个方程就得到所有特征值。
 
+> 💡 **等价表述**：齐次线性方程组 $M\mathbf{v} = \mathbf{0}$ 有非零解，当且仅当 $M$ 不可逆（即 $\det(M) = 0$）。特征方程正是利用了这个事实——令 $M = A - \lambda I$ 不可逆，从而求出 $\lambda$。
+
 #### 几何意义
 
 | 变换类型 | 特征值含义 | 几何效果 |
@@ -109,7 +111,9 @@ $$A = Q \Lambda Q^{-1}$$
 
 > ❓ **暂停想一想**：如果 $A$ 是对称矩阵且所有特征值都大于 0，$A$ 有什么特殊性质？
 >
-> 这意味着 $A$ 是**正定矩阵**。对于任何非零向量 $\mathbf{x}$，都有 $\mathbf{x}^T A \mathbf{x} > 0$。这在优化中很重要——损失函数的 Hessian 矩阵正定意味着当前在局部极小值附近。
+> 这意味着 $A$ 是**正定矩阵**。对于任何非零向量 $\mathbf{x}$，都有 $\mathbf{x}^T A \mathbf{x} > 0$。
+
+> 📖 **延伸阅读 — Hessian 矩阵与优化**：损失函数的 Hessian 矩阵（二阶导数矩阵）如果正定，意味着当前在局部极小值附近；如果有负特征值，则是鞍点。深度学习中的优化理论大量依赖 Hessian 的特征值分析，感兴趣的同学可以查阅相关资料深入了解。
 
 ---
 
@@ -152,6 +156,8 @@ $$A^T A = (U \Sigma V^T)^T (U \Sigma V^T) = V \Sigma^T \Sigma V^T$$
 $$A_k = U_k \Sigma_k V_k^T$$
 
 其中 $U_k$、$V_k$ 只取前 $k$ 列，$\Sigma_k$ 只取前 $k$ 个奇异值。
+
+**Frobenius 范数定义**：$\|A\|_F = \sqrt{\sum_{i=1}^m \sum_{j=1}^n a_{ij}^2}$，即矩阵所有元素平方和的平方根，也叫 Hilbert-Schmidt 范数。直觉上它衡量矩阵的「总能量」。
 
 **Eckart-Young 定理**：$A_k$ 是所有秩为 $k$ 的矩阵中，与 $A$ 距离（Frobenius 范数）最近的！
 
@@ -255,6 +261,14 @@ $$\frac{\partial L}{\partial \mathbf{y}} = \mathbf{y} - \mathbf{t} \quad \text{�
 
 $$\frac{\partial L}{\partial W} = \frac{\partial L}{\partial \mathbf{y}} \cdot \mathbf{x}^T = (\mathbf{y} - \mathbf{t})\mathbf{x}^T$$
 
+**数字例子**：设 $W = \begin{pmatrix}1 & 2\\3 & 4\end{pmatrix}$，$\mathbf{x} = \begin{pmatrix}1\\0\end{pmatrix}$，$\mathbf{t} = \begin{pmatrix}1\\1\end{pmatrix}$。
+
+前向：$\mathbf{y} = W\mathbf{x} = \begin{pmatrix}1\\3\end{pmatrix}$，误差 $\mathbf{y} - \mathbf{t} = \begin{pmatrix}0\\2\end{pmatrix}$。
+
+梯度：$\frac{\partial L}{\partial W} = (\mathbf{y}-\mathbf{t})\mathbf{x}^T = \begin{pmatrix}0\\2\end{pmatrix}\begin{pmatrix}1 & 0\end{pmatrix} = \begin{pmatrix}0 & 0\\2 & 0\end{pmatrix}$。
+
+**外积（outer product）说明**：$\mathbf{a}\mathbf{b}^T$ 是外积，它把 $\mathbf{a}$ 的每个元素乘以 $\mathbf{b}$ 的每个元素，结果是一个矩阵——第 $(i,j)$ 元素为 $a_i b_j$。比如 $\begin{pmatrix}2\\3\end{pmatrix}\begin{pmatrix}4 & 5\end{pmatrix} = \begin{pmatrix}8 & 10\\12 & 15\end{pmatrix}$。
+
 这就是为什么反向传播中权重的梯度是「误差 × 输入的外积」！
 
 $$\frac{\partial L}{\partial \mathbf{x}} = W^T \frac{\partial L}{\partial \mathbf{y}} = W^T(\mathbf{y} - \mathbf{t})$$
@@ -301,6 +315,8 @@ $$(A^T A - I)\mathbf{v} = \begin{pmatrix} 12 & 12 \\ 12 & 12 \end{pmatrix}\mathb
 $v_1 = -v_2$，单位化：$\mathbf{v}_2 = \frac{1}{\sqrt{2}}\begin{pmatrix} 1 \\ -1 \end{pmatrix}$
 
 $$V = \frac{1}{\sqrt{2}}\begin{pmatrix} 1 & 1 \\ 1 & -1 \end{pmatrix}$$
+
+**推导**：由 $A = U\Sigma V^T$ 两边右乘 $V$，得 $AV = U\Sigma$（因为 $V^TV = I$）。展开第 $i$ 列即 $A\mathbf{v}_i = \sigma_i \mathbf{u}_i$，这就是 Step 5 的计算公式的来源。
 
 **Step 5**：求左奇异向量 $U$
 
