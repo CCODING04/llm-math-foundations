@@ -254,7 +254,7 @@ $$\frac{\partial L}{\partial y} = \frac{\partial L}{\partial u}\frac{\partial u}
 
 > 🌱 **$\mathbb{1}_{z>0}$ 是什么意思？**
 >
-> 这叫 **指示函数**（Indicator Function），也叫 Ivent 函数，读作「当 z 大于 0 时为 1，否则为 0」。完整定义：
+> 这叫 **指示函数**（Indicator Function），也叫 Iverson 括号（Iverson bracket），读作「当 z 大于 0 时为 1，否则为 0」。完整定义：
 >
 > $$\mathbb{1}_{z>0} = \begin{cases} 1, & \text{如果 } z > 0 \\ 0, & \text{如果 } z \leq 0 \end{cases}$$
 >
