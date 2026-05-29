@@ -67,15 +67,13 @@ $$L(D) = \left(\frac{D_c}{D}\right)^{\alpha_D}$$
 
 > 🤔 **暂停想想**：$\alpha_N \approx 0.076$ 意味着什么？意味着模型参数增加 10 倍，损失只降低 $10^{0.076} \approx 1.19$ 倍——**收益是边际递减的**！这就是为什么盲目增大模型不一定划算。
 
----
-
-> ⚠️ **Kaplan 的局限性**：Kaplan 定律的 $α_N \approx 0.076$ 非常小，意味着损失对参数量极不敏感——暗示应该拼命增大模型，数据少点没关系。这直接导致了 GPT-3 的策略：175B 参数却只训了 300B tokens。然而，Kaplan 的实验有一个关键缺陷：**他们在固定的、偏小的数据集上训练不同大小的模型**，数据量成了瓶颈，导致大模型的潜力被低估。换句话说，Kaplan 的结论天然偏向"大模型小数据"。
+> 🤔 **Kaplan 定律的局限**：Kaplan 的实验有一个关键缺陷——**训练不充分**。他们的大多数模型只训练了少量步数就记录损失，这导致实验数据偏向「大模型、小数据」的情景。换句话说，Kaplan 的拟合曲线低估了数据量的重要性，高估了模型大小的收益。这直接影响了业界决策——GPT-3（175B 参数、300B tokens）就是按 Kaplan 定律设计的，但后来发现它严重「训练不足」。
 
 ---
 
 ### 2. Chinchilla 缩放定律（2022）
 
-DeepMind 的 Hoffmann 等人在 2022 年提出了更精确的缩放定律（Chinchilla 论文），核心发现：
+DeepMind 的 Hoffmann 等人在 2022 年**修正了 Kaplan 的偏差**，提出了更精确的缩放定律（Chinchilla 论文）。他们的关键改进：让每个模型都训练到收敛，而非提前截断。这样拟合出来的规律才可靠。核心发现：
 
 **给定计算预算 $C$（FLOPs），模型参数量 $N$ 和数据量 $D$ 应该等比例增长：**
 
@@ -114,7 +112,7 @@ $$D_{\text{opt}} \approx 0.3 \times (10^{23})^{0.5} \approx 0.3 \times 3.16 \tim
 
 ### 3. 线性回归与最小二乘：拟合缩放定律的工具
 
-> 💡 **为什么要在这里学线性回归？** 前面咱们看到缩放定律的核心公式 $L = A \cdot N^{-\alpha}$，取对数后变成 $\ln L = \ln A - \alpha \cdot \ln N$——这就是一条直线！也就是说，**缩放定律本质上是双对数空间中的线性关系**。要从前面的实验数据中拟合出 $A$ 和 $\alpha$，咱们需要线性回归和最小二乘法。它不是"额外"的数学工具，而是让缩放定律从"观察"变成"可量化规律"的关键桥梁。
+> 💡 **这一节和前面的关系**：前面咱们学了幂律和缩放定律，它们的公式取对数后都是**线性关系**——比如 $\ln L = \ln A - \alpha \ln N$。这意味着，如果我们把实验数据画在双对数坐标纸上，应该能看到一条直线。那问题来了：**怎么从杂乱的数据点里找出这条直线？** 答案就是**最小二乘法**——一种从数据中找「最佳拟合线」的经典工具。这一节就是教你这把工具怎么用。
 
 #### 为什么需要线性回归？
 
@@ -192,18 +190,18 @@ $$\nabla_\theta J(\theta) \approx \sum_t \nabla_\theta \ln \pi_\theta(a_t|s_t) \
 
 ---
 
-> 🗺️ **RL 在 LLM 对齐中的方法发展脉络**：在深入具体算法之前，咱们先理清 LLM 对齐的几种主流方法是怎么演化的：
-> 
-> 1. **SFT（监督微调）**：最基础的对齐方式，用"指令-回答"数据对直接训练模型。简单高效，但模型只是模仿人类写的回答，无法超越示范水平。
-> 2. **RLHF/PPO（2020 左右）**：引入奖励模型来评估回答质量，用 PPO 等 RL 算法优化策略。模型可以超越人类示范，但需要训练奖励模型和价值网络，工程复杂。
-> 3. **DPO（2023）**：Stanford 的突破——绕过奖励模型，直接用偏好数据（"A 比 B 好"）优化策略。大幅简化流程，但依赖于离线偏好数据的质量。
-> 4. **GRPO（2024）**：DeepSeek 的创新——不需要价值网络，用组内相对排名作为奖励信号。在数学推理等可验证场景特别高效。
-> 
-> 咱们接下来按这个脉络逐一展开：先看最新的 GRPO，再看理论最优雅的 DPO，最后看最经典的 PPO。每种方法都代表了不同的简化思路。
-
----
-
 ### 5. GRPO：Group Relative Policy Optimization
+
+> 💡 **RL 对齐方法是怎么一步步发展出来的？** 在学具体算法之前，咱们先梳理一下脉络：
+>
+> | 阶段 | 方法 | 核心思想 | 优缺点 |
+> |------|------|---------|--------|
+> | ① SFT | 监督微调 | 用人工标注的「好回答」直接训练模型 | 简单有效，但模型只学到了「模仿」，不会主动规避坏回答 |
+> | ② RLHF / PPO | 人类反馈强化学习 | 训练奖励模型 → 用 PPO 优化策略 | 效果好，但需要奖励模型 + 价值网络，训练复杂 |
+> | ③ DPO | 直接偏好优化 | 绕过奖励模型，直接用偏好数据训练 | 更简单，但依赖离线偏好数据，难以在线探索 |
+> | ④ GRPO | 组内相对策略优化 | 同一组回答互相比较，不需要价值网络 | 简单高效，特别适合数学等可验证场景 |
+>
+> 接下来咱们就按这个发展脉络来学——先看 GRPO，再看 DPO，最后看 PPO。顺序虽然和时间线不完全一致，但从简单到复杂，学起来更顺。
 
 GRPO 是 DeepSeek-Math 提出的一种简化版策略优化方法，核心思想是：**不需要价值网络（Critic），用组内相对排名作为奖励信号**。
 
@@ -257,9 +255,9 @@ $$\max_{\pi_\theta} \mathbb{E}_{y \sim \pi_\theta}\left[r(x,y) - \beta \ln \frac
 
 **第三步：这个优化问题的闭式解**
 
-> ⚠️ **进阶数学免责声明**：这一步的推导用到了**变分法（Calculus of Variations）**，属于进阶数学内容。咱们不需要掌握变分法的完整推导过程，只需要理解结论——"带 KL 散度约束的策略优化问题，存在一个闭式解"。如果你对变分法好奇，可以搜索"变分法入门"或"最大熵强化学习"，但这对理解 DPO 的后续步骤**不是必须的**。
-
 可以证明（通过变分法，将其视为带 KL 约束的优化），最优策略为：
+
+> ⚠️ **进阶注释**：这一步的严格证明需要用到**变分法（Calculus of Variations）**，具体来说是将带 KL 约束的最大化问题转化为 Lagrangian，然后对策略 $\pi$ 求泛函导数并令其为零。这超出了本章范围，咱们只需要**记住结论**：带 KL 惩罚的期望奖励最大化，其最优解就是下面的形式。感兴趣的同学可以参考 Peters & Schaal (2008) 的 *Reinforcement Learning of Motor Skills with Policy Gradients* 附录推导。
 
 $$\pi^*(y|x) = \frac{1}{Z(x)} \pi_{\text{ref}}(y|x) \exp\left(\frac{1}{\beta}r(x,y)\right)$$
 
@@ -698,17 +696,23 @@ print("图片已保存到 ./images/ppo_dpo_visual.png")
 
 ---
 
-## 📖 本章术语速查表
+## 📖 术语速查表
 
-| 术语 | 全称 / 英文 | 简要解释 |
-|------|------------|----------|
-| **FLOPs** | Floating Point Operations | 浮点运算次数，衡量模型训练/推理所需计算量的单位。一个 7B 模型训 1T tokens 大约需要 $6 \times 7 \times 10^9 \times 10^{12} \approx 4.2 \times 10^{22}$ FLOPs。 |
-| **SFT** | Supervised Fine-Tuning | 监督微调。用"指令-回答"对进一步训练预训练模型，使其学会遵循指令。是 RLHF 对齐流程的第一步。 |
-| **配分函数** | Partition Function / $Z(x)$ | 归一化常数 $Z(x) = \sum_y \pi_{\text{ref}}(y\|x) \exp(\frac{1}{\beta}r(x,y))$，确保概率分布的总和为 1。在 DPO 推导中会被巧妙消掉。 |
-| **GAE** | Generalized Advantage Estimation | 广义优势估计，一种平衡偏差和方差的优势函数计算方法：$\hat{A}_t^{\text{GAE}} = \sum_{l=0}^{T-t}(\gamma\lambda)^l \delta_{t+l}$。$\lambda=0$ 时退化为 TD 误差，$\lambda=1$ 时退化为蒙特卡洛估计。 |
-| **KL 散度** | Kullback-Leibler Divergence | 衡量两个概率分布 $P$ 和 $Q$ 差异的一种度量：$D_{\text{KL}}(P \| Q) = \mathbb{E}_P[\ln \frac{P}{Q}]$。值域 $[0, +\infty)$，不对称。在 RLHF 中用于约束策略不要偏离参考策略太远。 |
-| **logits** | — | 模型在 softmax 之前输出的原始（未归一化）分数。softmax 将 logits 转换为概率分布：$\pi(a) = \frac{e^{\text{logit}(a)}}{\sum_{a'} e^{\text{logit}(a')}}$。 |
-| **sigmoid 函数** | Sigmoid Function | $\sigma(z) = \frac{1}{1+e^{-z}}$，将任意实数映射到 $(0,1)$ 区间。在 DPO 中用于建模偏好概率：$p(y_w \succ y_l) = \sigma(r(y_w) - r(y_l))$。 |
+> 💡 这一章术语比较密集，这里汇总一下关键术语的简明解释，方便随时查阅。
+
+| 术语 | 英文 | 简明解释 |
+|------|------|----------|
+| **FLOPs** | Floating Point Operations | 浮点运算次数，衡量计算量的单位。训练一个 Transformer 的 FLOPs 约 $\approx 6ND$（$N$ = 参数量，$D$ = token 数） |
+| **SFT** | Supervised Fine-Tuning | 监督微调：用人工标注的高质量问答数据继续训练预训练模型，使其学会「回答问题」 |
+| **配分函数 $Z(x)$** | Partition Function | 归一化常数 $Z(x) = \sum_y \pi_{\text{ref}}(y|x) \exp\left(\frac{1}{\beta}r(x,y)\right)$，保证概率之和为 1。DPO 的巧妙之处在于 $Z(x)$ 在偏好差中被消掉 |
+| **GAE** | Generalized Advantage Estimation | 广义优势估计：用 $\hat{A}_t = \sum_{l=0}^{T-t}(\gamma\lambda)^l \delta_{t+l}$ 估计优势函数，平衡偏差和方差。$\gamma$ 是折扣因子，$\lambda$ 控制偏差-方差权衡 |
+| **KL 散度** | Kullback-Leibler Divergence | 衡量两个分布 $P$ 和 $Q$ 的差异：$D_{\text{KL}}(P \| Q) = \mathbb{E}_P[\ln \frac{P}{Q}]$。在 RLHF 中用于约束策略不要偏离参考策略太远 |
+| **logits** | Logits | 模型最后一层的原始输出（未归一化的分数），经过 softmax 后变为概率。例如模型输出 $[2.1, 0.5, -1.3]$ 就是 logits |
+| **sigmoid $\sigma(z)$** | Sigmoid Function | $\sigma(z) = \frac{1}{1+e^{-z}}$，将任意实数映射到 $(0,1)$ 区间。在 DPO 中用于建模偏好概率 $p(y_w \succ y_l) = \sigma(r(y_w) - r(y_l))$ |
+| **RLHF** | Reinforcement Learning from Human Feedback | 基于人类反馈的强化学习：用人类偏好数据训练奖励模型，再用 RL（通常是 PPO）优化策略 |
+| **Actor-Critic** | Actor-Critic | 强化学习架构：Actor（策略网络）决定动作，Critic（价值网络）评估状态价值，两者协作训练 |
+| **REINFORCE** | REINFORCE | 最基础的策略梯度算法：采样完整轨迹，用蒙特卡洛方法估计梯度。简单但方差大 |
+| **one-hot** | One-Hot Encoding | 只有一个位置为 1、其余为 0 的向量。例如动作 3 在 10 个动作中的 one-hot 编码是 $[0,0,0,1,0,0,0,0,0,0]$ |
 
 ---
 

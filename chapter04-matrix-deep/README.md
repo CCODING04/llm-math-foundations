@@ -60,7 +60,15 @@ $$\det(A - \lambda I) = 0$$
 
 这就是**特征方程**。解这个方程就得到所有特征值。
 
-> 💡 **等价表述**：齐次线性方程组 $M\mathbf{v} = \mathbf{0}$ 有非零解，当且仅当 $M$ 不可逆（即 $\det(M) = 0$）。特征方程正是利用了这个事实——令 $M = A - \lambda I$ 不可逆，从而求出 $\lambda$。
+> 💡 **为什么非零解意味着矩阵必须奇异？**
+>
+> 回顾线性方程组的理论：对于 $B\mathbf{x} = \mathbf{0}$——
+> - 如果 $B$ 可逆（非奇异），两边乘 $B^{-1}$ 得到 $\mathbf{x} = B^{-1}\mathbf{0} = \mathbf{0}$，即**只有零解**。
+> - 反过来，如果咱们要求存在**非零解** $\mathbf{x} \neq \mathbf{0}$，那 $B$ 就**不能可逆**，也就是说 $B$ 必须是奇异矩阵。
+>
+> 在特征方程中，$B = (A - \lambda I)$，$\mathbf{x} = \mathbf{v}$。咱们要求 $\mathbf{v} \neq \mathbf{0}$，所以 $(A - \lambda I)$ 必须奇异，而奇异矩阵的行列式为零：$\det(A - \lambda I) = 0$。
+>
+> **直觉**：矩阵奇异 = 存在某个方向被「压扁」到零 = 那个方向上非零的输入经过变换后变成了零。特征值就是让这种「压扁」发生的 $\lambda$ 值。
 
 #### 几何意义
 
@@ -111,9 +119,15 @@ $$A = Q \Lambda Q^{-1}$$
 
 > ❓ **暂停想一想**：如果 $A$ 是对称矩阵且所有特征值都大于 0，$A$ 有什么特殊性质？
 >
-> 这意味着 $A$ 是**正定矩阵**。对于任何非零向量 $\mathbf{x}$，都有 $\mathbf{x}^T A \mathbf{x} > 0$。
-
-> 📖 **延伸阅读 — Hessian 矩阵与优化**：损失函数的 Hessian 矩阵（二阶导数矩阵）如果正定，意味着当前在局部极小值附近；如果有负特征值，则是鞍点。深度学习中的优化理论大量依赖 Hessian 的特征值分析，感兴趣的同学可以查阅相关资料深入了解。
+> 这意味着 $A$ 是**正定矩阵**（positive definite matrix）。
+>
+> **正定矩阵的等价定义**：对于任何非零向量 $\mathbf{x}$，都有 $\mathbf{x}^T A \mathbf{x} > 0$。
+>
+> **直觉**：$\mathbf{x}^T A \mathbf{x}$ 可以理解为二次型——它描述了一个「碗形」曲面。正定意味着这个碗口朝上（有最小值），而不是马鞍形（在某些方向上翘起，另一些方向上凹陷）。
+>
+> **为什么重要**：在优化中，损失函数的 Hessian 矩阵正定意味着当前在局部极小值附近（碗底），梯度下降能稳定收敛。如果 Hessian 不正定，说明有方向在上升，优化可能不稳定。
+>
+> **简单例子**：$A = \begin{pmatrix} 2 & 0 \\ 0 & 3 \end{pmatrix}$ 是正定的，因为对任何 $\mathbf{x} = (x_1, x_2)^T$，$\mathbf{x}^T A \mathbf{x} = 2x_1^2 + 3x_2^2 > 0$（只要 $\mathbf{x} \neq \mathbf{0}$）。
 
 ---
 
@@ -157,7 +171,15 @@ $$A_k = U_k \Sigma_k V_k^T$$
 
 其中 $U_k$、$V_k$ 只取前 $k$ 列，$\Sigma_k$ 只取前 $k$ 个奇异值。
 
-**Frobenius 范数定义**：$\|A\|_F = \sqrt{\sum_{i=1}^m \sum_{j=1}^n a_{ij}^2}$，即矩阵所有元素平方和的平方根，也叫 Hilbert-Schmidt 范数。直觉上它衡量矩阵的「总能量」。
+> 💡 **Frobenius 范数是什么？**
+>
+> Frobenius 范数是矩阵的一种「大小度量」，定义为矩阵所有元素的平方和再开根号：
+>
+> $$\|A\|_F = \sqrt{\sum_{i=1}^{m}\sum_{j=1}^{n} A_{ij}^2}$$
+>
+> **直觉**：把矩阵所有元素排成一排，当做一个普通向量来算 $L_2$ 范数。它衡量的是「矩阵整体有多大」。对于 $2 \times 2$ 矩阵 $\begin{pmatrix} 3 & 2 \\ 2 & 3 \end{pmatrix}$，$\|A\|_F = \sqrt{9+4+4+9} = \sqrt{26} \approx 5.10$。
+>
+> Eckart-Young 定理说的是：在所有秩为 $k$ 的矩阵中，用 SVD 取前 $k$ 个奇异值得到的 $A_k$，是离 $A$ 「最近」的那个（按 Frobenius 范数衡量）。
 
 **Eckart-Young 定理**：$A_k$ 是所有秩为 $k$ 的矩阵中，与 $A$ 距离（Frobenius 范数）最近的！
 
@@ -261,19 +283,49 @@ $$\frac{\partial L}{\partial \mathbf{y}} = \mathbf{y} - \mathbf{t} \quad \text{�
 
 $$\frac{\partial L}{\partial W} = \frac{\partial L}{\partial \mathbf{y}} \cdot \mathbf{x}^T = (\mathbf{y} - \mathbf{t})\mathbf{x}^T$$
 
-**数字例子**：设 $W = \begin{pmatrix}1 & 2\\3 & 4\end{pmatrix}$，$\mathbf{x} = \begin{pmatrix}1\\0\end{pmatrix}$，$\mathbf{t} = \begin{pmatrix}1\\1\end{pmatrix}$。
-
-前向：$\mathbf{y} = W\mathbf{x} = \begin{pmatrix}1\\3\end{pmatrix}$，误差 $\mathbf{y} - \mathbf{t} = \begin{pmatrix}0\\2\end{pmatrix}$。
-
-梯度：$\frac{\partial L}{\partial W} = (\mathbf{y}-\mathbf{t})\mathbf{x}^T = \begin{pmatrix}0\\2\end{pmatrix}\begin{pmatrix}1 & 0\end{pmatrix} = \begin{pmatrix}0 & 0\\2 & 0\end{pmatrix}$。
-
-**外积（outer product）说明**：$\mathbf{a}\mathbf{b}^T$ 是外积，它把 $\mathbf{a}$ 的每个元素乘以 $\mathbf{b}$ 的每个元素，结果是一个矩阵——第 $(i,j)$ 元素为 $a_i b_j$。比如 $\begin{pmatrix}2\\3\end{pmatrix}\begin{pmatrix}4 & 5\end{pmatrix} = \begin{pmatrix}8 & 10\\12 & 15\end{pmatrix}$。
+> 💡 **外积是什么？**
+>
+> 两个向量 $\mathbf{a} \in \mathbb{R}^m$ 和 $\mathbf{b} \in \mathbb{R}^n$ 的**外积**（outer product）是一个矩阵：
+>
+> $$\mathbf{a}\mathbf{b}^T = \begin{pmatrix} a_1 b_1 & a_1 b_2 & \cdots & a_1 b_n \\ a_2 b_1 & a_2 b_2 & \cdots & a_2 b_n \\ \vdots & \vdots & \ddots & \vdots \\ a_m b_1 & a_m b_2 & \cdots & a_m b_n \end{pmatrix}$$
+>
+> 注意：内积 $\mathbf{a}^T\mathbf{b}$ 得到一个**标量**，外积 $\mathbf{a}\mathbf{b}^T$ 得到一个**矩阵**。
+>
+> **简单例子**：$\begin{pmatrix} 2 \\ 3 \end{pmatrix} \begin{pmatrix} 1 & 4 \end{pmatrix} = \begin{pmatrix} 2 \times 1 & 2 \times 4 \\ 3 \times 1 & 3 \times 4 \end{pmatrix} = \begin{pmatrix} 2 & 8 \\ 3 & 12 \end{pmatrix}$
 
 这就是为什么反向传播中权重的梯度是「误差 × 输入的外积」！
 
 $$\frac{\partial L}{\partial \mathbf{x}} = W^T \frac{\partial L}{\partial \mathbf{y}} = W^T(\mathbf{y} - \mathbf{t})$$
 
 注意：梯度传给输入时，权重矩阵被**转置**了。这就是链式法则在矩阵运算中的体现。
+
+#### 📊 手算例子：2×2 矩阵求导全过程
+
+让咱们用一个具体的小例子，把上面的公式走一遍，看清楚每一步。
+
+**设定**：$W = \begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}$，$\mathbf{x} = \begin{pmatrix} 1 \\ 1 \end{pmatrix}$，$\mathbf{t} = \begin{pmatrix} 3 \\ 7 \end{pmatrix}$
+
+**前向传播**：
+
+$$\mathbf{y} = W\mathbf{x} = \begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}\begin{pmatrix} 1 \\ 1 \end{pmatrix} = \begin{pmatrix} 3 \\ 7 \end{pmatrix}$$
+
+$$L = \frac{1}{2}\|\mathbf{y} - \mathbf{t}\|^2 = \frac{1}{2}\left\|\begin{pmatrix} 3 \\ 7 \end{pmatrix} - \begin{pmatrix} 3 \\ 7 \end{pmatrix}\right\|^2 = \frac{1}{2}\left\|\begin{pmatrix} 0 \\ 0 \end{pmatrix}\right\|^2 = 0$$
+
+哎呀，损失为零（因为咱们故意选了完美目标）！换个不完美的：$\mathbf{t} = \begin{pmatrix} 2 \\ 5 \end{pmatrix}$
+
+$$\mathbf{y} - \mathbf{t} = \begin{pmatrix} 3 - 2 \\ 7 - 5 \end{pmatrix} = \begin{pmatrix} 1 \\ 2 \end{pmatrix}$$
+
+$$L = \frac{1}{2}(1^2 + 2^2) = \frac{5}{2} = 2.5$$
+
+**反向传播**：
+
+$$\frac{\partial L}{\partial \mathbf{y}} = \mathbf{y} - \mathbf{t} = \begin{pmatrix} 1 \\ 2 \end{pmatrix}$$
+
+$$\frac{\partial L}{\partial W} = (\mathbf{y} - \mathbf{t})\mathbf{x}^T = \begin{pmatrix} 1 \\ 2 \end{pmatrix}\begin{pmatrix} 1 & 1 \end{pmatrix} = \begin{pmatrix} 1 & 1 \\ 2 & 2 \end{pmatrix}$$
+
+$$\frac{\partial L}{\partial \mathbf{x}} = W^T(\mathbf{y} - \mathbf{t}) = \begin{pmatrix} 1 & 3 \\ 2 & 4 \end{pmatrix}\begin{pmatrix} 1 \\ 2 \end{pmatrix} = \begin{pmatrix} 7 \\ 10 \end{pmatrix}$$
+
+> 🌱 **看懂了吗？** $\frac{\partial L}{\partial W}$ 的每个元素 $W_{ij}$ 的梯度就是「第 $i$ 个输出误差 × 第 $j$ 个输入值」，刚好对应外积矩阵的第 $(i,j)$ 元素。梯度下降一步：$W \leftarrow W - \eta \cdot \frac{\partial L}{\partial W}$，每个权重都在朝着减小误差的方向调整。
 
 ---
 
@@ -316,9 +368,21 @@ $v_1 = -v_2$，单位化：$\mathbf{v}_2 = \frac{1}{\sqrt{2}}\begin{pmatrix} 1 \
 
 $$V = \frac{1}{\sqrt{2}}\begin{pmatrix} 1 & 1 \\ 1 & -1 \end{pmatrix}$$
 
-**推导**：由 $A = U\Sigma V^T$ 两边右乘 $V$，得 $AV = U\Sigma$（因为 $V^TV = I$）。展开第 $i$ 列即 $A\mathbf{v}_i = \sigma_i \mathbf{u}_i$，这就是 Step 5 的计算公式的来源。
-
 **Step 5**：求左奇异向量 $U$
+
+> 💡 **这个公式从哪来的？**
+>
+> SVD 的定义是 $A = U\Sigma V^T$。两边右乘 $V$：
+>
+> $$AV = U\Sigma V^T V = U\Sigma I = U\Sigma$$
+>
+> 把矩阵乘法按列展开，第 $i$ 列满足：
+>
+> $$A\mathbf{v}_i = \sigma_i \mathbf{u}_i$$
+>
+> 所以 $\mathbf{u}_i = \frac{1}{\sigma_i} A\mathbf{v}_i$，即 $\mathbf{u}_i = \frac{A\mathbf{v}_i}{\sigma_i}$。
+>
+> **直觉**：$\mathbf{u}_i$ 就是 $A$ 作用在 $\mathbf{v}_i$ 上的结果，再除以拉伸量 $\sigma_i$ 归一化。
 
 $$\mathbf{u}_i = \frac{A\mathbf{v}_i}{\sigma_i}$$
 
