@@ -727,4 +727,4 @@ $$\boxed{H(P, Q) = \underbrace{H(P)}_{\text{真实熵}} + \underbrace{D_{KL}(P \
 
 ---
 
-[← 第五章：概率分布](../chapter05-probability-distributions/README.md) | [第七章：最优化 →](../chapter07-optimization/README.md)
+[← 第五章：优化理论](../chapter05-optimization/README.md) | [第七章：注意力机制 →](../chapter07-attention-math/README.md)

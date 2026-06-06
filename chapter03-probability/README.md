@@ -347,7 +347,7 @@ $$\boxed{f(x) = \frac{1}{\sqrt{2\pi}\sigma} \exp\left(-\frac{(x-\mu)^2}{2\sigma^
 前面介绍了均匀分布、二项分布、正态分布，光看公式还是有点抽象。好，咱们把它们画出来放一起对比——形状不同，但各有各的用处。
 
 ```python
-# 文件：scripts/distributions.py
+# 文件：scripts/gaussian_distribution.py
 """常见概率分布可视化"""
 import numpy as np
 import matplotlib.pyplot as plt
@@ -586,7 +586,7 @@ $$\boxed{\hat{p}_{MLE} = \frac{\sum x_i}{n} = \frac{\text{成功次数}}{\text{�
 推导过程严谨归严谨，但咱们还是画出来看看——把 n=10 次、k=7 次正面这个场景的似然函数画出来，红色虚线标出 MLE 估计值 p̂=0.7，看它是不是真的在峰顶。
 
 ```python
-# 文件：scripts/mle_demo.py
+# 文件：scripts/mle_cross_entropy.py
 """MLE 似然函数可视化"""
 import numpy as np
 import matplotlib.pyplot as plt
@@ -677,4 +677,4 @@ $$\text{训练 LLM} \iff \text{极大似然估计} \iff \text{最小化交叉熵
 
 ---
 
-> 📚 **下一章预告**：信息论——熵、交叉熵、KL 散度。我们会看到，概率和信息是一枚硬币的两面。
+> 📚 **下一章预告**：矩阵深度——特征值、SVD、矩阵求导。我们会看到，线性代数远不止矩阵乘法，它是理解 Transformer 参数结构的基础。

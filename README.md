@@ -57,7 +57,7 @@
 
 | 章节 | 主题 | 你将学到 |
 |:---:|:---|:---|
-| [Ch1](chapter01-linear-algebra/) | 线性代数基础 | 向量、矩阵运算、特征分解、SVD——理解 Embedding 和模型参数的基础 |
+| [Ch1](chapter01-linear-algebra/) | 线性代数基础 | 向量、矩阵运算、点积、范数——理解 Embedding 和模型参数的基础 |
 | [Ch2](chapter02-calculus/) | 微积分核心 | 导数、偏导数、链式法则、梯度——理解反向传播的数学本质 |
 | [Ch3](chapter03-probability/) | 概率统计入门 | 概率分布、条件概率、最大似然估计——理解语言模型如何预测下一个词 |
 
@@ -65,7 +65,7 @@
 
 | 章节 | 主题 | 你将学到 |
 |:---:|:---|:---|
-| [Ch4](chapter04-matrix-deep/) | 矩阵深度 | 矩阵求导、张量运算、特征值分解进阶——Transformer 计算的核心数学 |
+| [Ch4](chapter04-matrix-deep/) | 矩阵深度 | 特征值、SVD、正交矩阵、行列式、矩阵求导——Transformer 计算的核心数学 |
 | [Ch5](chapter05-optimization/) | 优化理论 | 梯度下降变体、Adam 优化器、学习率调度——理解模型训练如何收敛 |
 | [Ch6](chapter06-information-theory/) | 信息论 | 熵、交叉熵、KL 散度、互信息——理解损失函数和模型评估的标准 |
 
@@ -73,8 +73,8 @@
 
 | 章节 | 主题 | 你将学到 |
 |:---:|:---|:---|
-| [Ch7](chapter07-attention-math/) | 注意力机制数学 | QKV 计算、多头注意力、位置编码的数学推导——逐行拆解 Transformer |
-| [Ch8](chapter08-probability-advanced/) | 概率进阶 | 采样策略、贝叶斯推断、变分推断——理解生成过程和解码策略 |
+| [Ch7](chapter07-attention-math/) | 注意力机制数学 | QKV 计算、多头注意力、因果掩码——逐行拆解 Transformer |
+| [Ch8](chapter08-probability-advanced/) | 概率进阶与采样 | 温度、Top-K、Top-P、MLE、NLL——理解生成过程和解码策略 |
 | [Ch9](chapter09-scaling-rl/) | 缩放定律与 RL | Scaling Law、PPO、DPO 的数学原理——理解大模型的训练范式 |
 
 ---
@@ -102,7 +102,7 @@ git clone https://github.com/your-username/llm-math-foundations.git
 cd llm-math-foundations
 
 # 安装依赖（可选，用于运行可视化脚本）
-pip install numpy matplotlib
+pip install -r requirements.txt
 
 # 从第一章开始
 cd chapter01-linear-algebra
@@ -152,7 +152,7 @@ llm-math-foundations/
 │   ├── images/
 │   └── scripts/
 └── resources/                         # 📚 推荐资源汇总
-    └── README.md
+    └── further-reading.md
 ```
 
 每个章节包含三个部分：

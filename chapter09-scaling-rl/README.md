@@ -357,7 +357,7 @@ axes[1].legend(fontsize=8, ncol=2)
 axes[1].grid(True, alpha=0.3)
 
 plt.tight_layout()
-plt.savefig('./images/policy_gradient.png', dip=150, bbox_inches='tight')
+plt.savefig('./images/policy_gradient.png', dpi=150, bbox_inches='tight')
 print("图片已保存到 ./images/policy_gradient.png")
 print(f"\n最终策略：")
 final_probs = np.exp(theta) / np.sum(np.exp(theta))
