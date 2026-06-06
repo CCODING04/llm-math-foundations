@@ -261,89 +261,21 @@ Top-P 是**自适应的**：
 
 ---
 
-### 5. 似然函数与最大似然估计（MLE）
+### 5. MLE 快速回顾与工程视角
 
-到目前为止，我们讨论的是**推理阶段**——怎么从概率分布中采样。现在让我们回到**训练阶段**——这个概率分布是怎么学来的。
+> 📖 **MLE 基础在第三章 §6 已详细推导**（伯努利例子 → 似然函数 → 对数似然 → 结果）。这里快速回顾核心结论，重点放在工程视角：PyTorch 的 `CrossEntropyLoss` 内部到底在做什么。
 
-#### 似然函数
+#### 核心结论回顾
 
-给定一个训练语料 $\mathcal{D} = \{x^{(1)}, x^{(2)}, \ldots, x^{(N)}\}$，其中每条数据是一个 token 序列 $x^{(n)} = (x_1^{(n)}, x_2^{(n)}, \ldots, x_{L_n}^{(n)})$。
+语言模型训练 = **最大化似然** = **最小化负对数似然（NLL）** = **最小化交叉熵损失**。四者等价：
 
-模型的参数为 $\theta$（比如神经网络的权重）。**似然函数**定义为：在参数 $\theta$ 下，观测到整个训练数据的概率：
+$$\theta^* = \arg\max_\theta \prod_{n} \prod_{t} P_\theta(x_t^{(n)} \mid x_{<t}^{(n)}) = \arg\min_\theta \mathcal{L}_{\text{CE}}(\theta)$$
 
-$$\mathcal{L}(\theta) = \prod_{n=1}^{N} P_\theta(x^{(n)}) = \prod_{n=1}^{N} \prod_{t=1}^{L_n} P_\theta(x_t^{(n)} \mid x_{<t}^{(n)})$$
-
-> 🤔 **暂停理解**：似然函数 $L(\theta)$ 和概率 $P(x | \theta)$ 在数值上是同一个东西，但视角不同：
-> - **概率**：固定参数 $\theta$，数据 $x$ 变化 —— "在这个模型下，看到不同数据的可能性"
-> - **似然**：固定数据 $x$，参数 $\theta$ 变化 —— "不同参数解释这组数据的好坏程度"
->
-> 打个比方：概率是"给定眼镜（模型），你看到什么"，似然是"给定你看到的景象（数据），哪副眼镜最合适"。
-
-#### 最大似然估计（MLE）
-
-**核心思想**：找到让似然函数最大的参数 $\theta^*$。
-
-$$\theta^* = \arg\max_\theta \mathcal{L}(\theta) = \arg\max_\theta \prod_{n=1}^{N} \prod_{t=1}^{L_n} P_\theta(x_t^{(n)} \mid x_{<t}^{(n)})$$
-
-但在实际计算中，我们**不直接最大化似然**，而是等价地**最大化对数似然**。
-
----
-
-### 6. 负对数似然（NLL）—— 为什么训练要最小化 NLL
-
-#### 对数似然
-
-取对数（利用 $\log(ab) = \log a + \log b$）：
-
-$$\log \mathcal{L}(\theta) = \sum_{n=1}^{N} \sum_{t=1}^{L_n} \log P_\theta(x_t^{(n)} \mid x_{<t}^{(n)})$$
-
-> **为什么要取对数？**
-> 1. **数值稳定性**：概率值在 $[0,1]$ 之间，大量概率相乘会下溢为 0。取对数后变成相加，避免下溢。
-> 2. **计算方便**：乘法变加法，求导更简单。
-> 3. **凸性**：对某些模型，对数似然是凸函数，优化更友好。
-
-#### 负对数似然（NLL）
-
-$$\text{NLL}(\theta) = -\log \mathcal{L}(\theta) = -\sum_{n=1}^{N} \sum_{t=1}^{L_n} \log P_\theta(x_t^{(n)} \mid x_{<t}^{(n)})$$
-
-最大化似然 $\Leftrightarrow$ 最大化对数似然 $\Leftrightarrow$ **最小化负对数似然**。
-
-#### 交叉熵损失
-
-对 NLL 取平均，就得到我们熟悉的**交叉熵损失**：
+推导链：似然 → 取对数 → 取负 → 取平均 = 交叉熵损失：
 
 $$\mathcal{L}_{\text{CE}} = -\frac{1}{M} \sum_{n=1}^{N} \sum_{t=1}^{L_n} \log P_\theta(x_t^{(n)} \mid x_{<t}^{(n)})$$
 
-其中 $M = \sum_{n=1}^{N} L_n$ 是总 token 数。
-
-> 🎯 **和前面章节的联系**：交叉熵损失 $\mathcal{L}_{CE}$ 其实就是**交叉熵** $H(P_{\text{data}}, P_\theta)$ 的经验估计，其中 $P_{\text{data}}$ 是数据的真实分布（用 one-hot 向量表示）。
->
-> 回顾交叉熵公式：
-> $$H(P, Q) = -\sum_x P(x) \log Q(x)$$
->
-> 当 $P$ 是 one-hot（真实 token 的分布），$Q$ 是模型预测分布时，交叉熵就简化为 $-\log P_\theta(\text{真实 token})$。
-
-#### 完整推导链
-
-让我们把整个过程串起来（不跳步）：
-
-**Step 1**：MLE 目标
-$$\theta^* = \arg\max_\theta \prod_{n} \prod_{t} P_\theta(x_t^{(n)} \mid x_{<t}^{(n)})$$
-
-**Step 2**：取对数（单调变换，不改变最优点）
-$$\theta^* = \arg\max_\theta \sum_{n} \sum_{t} \log P_\theta(x_t^{(n)} \mid x_{<t}^{(n)})$$
-
-**Step 3**：取负（max → min）
-$$\theta^* = \arg\min_\theta \left[ -\sum_{n} \sum_{t} \log P_\theta(x_t^{(n)} \mid x_{<t}^{(n)}) \right]$$
-
-**Step 4**：取平均（加常数不改变最优点，但方便梯度计算）
-$$\theta^* = \arg\min_\theta \frac{-1}{M} \sum_{n} \sum_{t} \log P_\theta(x_t^{(n)} \mid x_{<t}^{(n)})$$
-
-**Step 5**：这就是交叉熵损失！
-
-$$\boxed{\theta^* = \arg\min_\theta \mathcal{L}_{\text{CE}}(\theta)}$$
-
-> ✅ **总结**：语言模型训练 = 最小化交叉熵损失 = 最小化 NLL = 最大化似然。四者是等价的！
+> 🎯 **和前面章节的联系**：交叉熵损失 $\mathcal{L}_{CE}$ 就是交叉熵 $H(P_{\text{data}}, P_\theta)$ 的经验估计（第六章详解）。
 
 #### 💻 动手验证：MLE ≡ NLL ≡ 交叉熵
 
@@ -809,4 +741,4 @@ KL(Q2 || P2) = 1.3219
 | MLE | $\max_\theta \prod P_\theta(x_t \| x_{<t})$ | 找最解释数据的参数 |
 | NLL | $-\sum \log P_\theta(x_t \| x_{<t})$ | 训练损失，等价于交叉熵 |
 
-> 🌱 **下一章预告**：我们将进入**缩放定律与 RL**——Scaling Law、PPO、DPO、GRPO。理解大模型训练规模、偏好优化和对齐算法背后的数学。
+> 🌱 **下一章预告**：我们将进入**缩放定律**——Scaling Law、Chinchilla、幂律拟合。理解大模型训练规模的数学规律。

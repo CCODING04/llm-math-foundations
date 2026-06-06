@@ -41,17 +41,25 @@
 
 ## 📖 学习路线图
 
-本仓库按 **三个阶梯** 组织，由浅入深。每个阶梯包含三个章节，循序渐进。
+本仓库按 **三个阶梯 + 预备章** 组织，由浅入深。每个阶梯包含三个章节，循序渐进。
 
 ```
-阶梯一（基础）          阶梯二（进阶）          阶梯三（前沿）
-━━━━━━━━━━━━━         ━━━━━━━━━━━━━         ━━━━━━━━━━━━━
-  Ch1 线性代数    →      Ch4 矩阵深度    →     Ch7 注意力机制数学
-  Ch2 微积分      →      Ch5 优化理论    →     Ch8 概率进阶
-  Ch3 概率统计    →      Ch6 信息论      →     Ch9 缩放定律与 RL
-━━━━━━━━━━━━━         ━━━━━━━━━━━━━         ━━━━━━━━━━━━━
-  打地基阶段             建框架阶段             理解前沿阶段
+预备章                阶梯一（基础）          阶梯二（进阶）          阶梯三（前沿）
+━━━━━━━━━           ━━━━━━━━━━━━━         ━━━━━━━━━━━━━         ━━━━━━━━━━━━━
+Ch0 数学预备  →      Ch1 线性代数    →      Ch4 矩阵深度    →     Ch7 注意力机制数学
+                     Ch2 微积分      →      Ch5 优化理论    →     Ch8 概率进阶与采样
+                     Ch3 概率统计    →      Ch6 信息论      →     Ch9 缩放定律
+                                                                                 ↓
+                                                                          Ch10 RL基础与对齐
+━━━━━━━━━           ━━━━━━━━━━━━━         ━━━━━━━━━━━━━         ━━━━━━━━━━━━━
+扫清障碍              打地基阶段             建框架阶段             理解前沿阶段
 ```
+
+### 🔧 预备章：扫清障碍
+
+| 章节 | 主题 | 你将学到 |
+|:---:|:---|:---|
+| [Ch0](chapter00-math-prep/) | 数学预备 | Σ/Π 求和符号、log/exp 规则、函数复合、NumPy 极简入门——扫清后续章节的符号障碍 |
 
 ### 🏗️ 第一阶：打地基（基础数学）
 
@@ -75,7 +83,8 @@
 |:---:|:---|:---|
 | [Ch7](chapter07-attention-math/) | 注意力机制数学 | QKV 计算、多头注意力、因果掩码——逐行拆解 Transformer |
 | [Ch8](chapter08-probability-advanced/) | 概率进阶与采样 | 温度、Top-K、Top-P、MLE、NLL——理解生成过程和解码策略 |
-| [Ch9](chapter09-scaling-rl/) | 缩放定律与 RL | Scaling Law、PPO、DPO 的数学原理——理解大模型的训练范式 |
+| [Ch9](chapter09-scaling-rl/) | 缩放定律 | Scaling Law、Chinchilla、幂律拟合——理解大模型的训练范式 |
+| [Ch10](chapter10-rl-alignment/) | RL 基础与对齐 | Policy Gradient、PPO、DPO、GRPO——理解 RLHF 对齐算法 |
 
 ---
 
@@ -83,7 +92,7 @@
 
 ### 推荐学习方式
 
-1. **按顺序学习**：章节之间有依赖关系，建议从 Ch1 开始，依次推进
+1. **按顺序学习**：章节之间有依赖关系，建议从 Ch0 开始，依次推进。如果数学基础扎实，可以跳过 Ch0 直接从 Ch1 开始
 2. **动手运行**：每章的 `scripts/` 目录包含可视化代码，运行它们来建立直觉
 3. **做好笔记**：数学需要反复理解，建议边学边记
 4. **不跳过推导**：看懂推导过程比记住结论更重要
@@ -115,6 +124,9 @@ cd chapter01-linear-algebra
 ```
 llm-math-foundations/
 ├── README.md                          # 你正在看的这个文件
+├── requirements.txt                   # 依赖列表
+├── chapter00-math-prep/               # 🔧 预备章：数学预备
+│   └── README.md
 ├── chapter01-linear-algebra/          # 🏗️ 第一阶：线性代数基础
 │   ├── README.md                      # 章节正文
 │   ├── images/                        # 配图和示意图
@@ -143,11 +155,15 @@ llm-math-foundations/
 │   ├── README.md
 │   ├── images/
 │   └── scripts/
-├── chapter08-probability-advanced/    # 🚀 第三阶：概率进阶
+├── chapter08-probability-advanced/    # 🚀 第三阶：概率进阶与采样
 │   ├── README.md
 │   ├── images/
 │   └── scripts/
-├── chapter09-scaling-rl/              # 🚀 第三阶：缩放定律与 RL
+├── chapter09-scaling-rl/              # 🚀 第三阶：缩放定律
+│   ├── README.md
+│   ├── images/
+│   └── scripts/
+├── chapter10-rl-alignment/            # 🚀 第三阶：RL 基础与对齐
 │   ├── README.md
 │   ├── images/
 │   └── scripts/
@@ -164,6 +180,7 @@ llm-math-foundations/
 
 ## 📚 章节目录
 
+- [Ch0 - 数学预备](chapter00-math-prep/)
 - [Ch1 - 线性代数基础](chapter01-linear-algebra/)
 - [Ch2 - 微积分核心](chapter02-calculus/)
 - [Ch3 - 概率统计入门](chapter03-probability/)
@@ -171,8 +188,9 @@ llm-math-foundations/
 - [Ch5 - 优化理论](chapter05-optimization/)
 - [Ch6 - 信息论](chapter06-information-theory/)
 - [Ch7 - 注意力机制数学](chapter07-attention-math/)
-- [Ch8 - 概率进阶](chapter08-probability-advanced/)
-- [Ch9 - 缩放定律与 RL](chapter09-scaling-rl/)
+- [Ch8 - 概率进阶与采样](chapter08-probability-advanced/)
+- [Ch9 - 缩放定律](chapter09-scaling-rl/)
+- [Ch10 - RL 基础与对齐](chapter10-rl-alignment/)
 - [推荐资源](resources/)
 
 ---
