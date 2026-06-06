@@ -86,6 +86,16 @@ Ch0 数学预备  →      Ch1 线性代数    →      Ch4 矩阵深度    → 
 | [Ch9](chapter09-scaling-rl/) | 缩放定律 | Scaling Law、Chinchilla、幂律拟合——理解大模型的训练范式 |
 | [Ch10](chapter10-rl-alignment/) | RL 基础与对齐 | Policy Gradient、PPO、DPO、GRPO——理解 RLHF 对齐算法 |
 
+### 🛠️ 阶段项目：从"能看懂"到"能做出来"
+
+每完成一个阶梯，用阶段项目把知识串起来：
+
+| 项目 | 覆盖章节 | 你将做到 |
+|:---:|:---|:---|
+| [项目 1](project01-linear-regression/) | Ch1-Ch3 | 从零实现线性回归：手写前向传播、梯度下降、验证 MSE = MLE |
+| [项目 2](project02-two-layer-nn/) | Ch4-Ch6 | 从零实现两层神经网络：手写反向传播、交叉熵、Adam 优化器 |
+| [项目 3](project03-mini-attention/) | Ch7-Ch8 | 手写多头注意力 + 解码采样器：QKV、因果掩码、温度/Top-K/Top-P |
+
 ---
 
 ## 如何使用本仓库
@@ -167,6 +177,16 @@ llm-math-foundations/
 │   ├── README.md
 │   ├── images/
 │   └── scripts/
+├── project01-linear-regression/       # 🛠️ 阶段项目 1：线性回归
+│   ├── README.md
+│   ├── images/
+│   └── scripts/
+├── project02-two-layer-nn/            # 🛠️ 阶段项目 2：两层神经网络
+│   ├── README.md
+│   └── scripts/
+├── project03-mini-attention/          # 🛠️ 阶段项目 3：Mini Attention + 采样器
+│   ├── README.md
+│   └── scripts/
 └── resources/                         # 📚 推荐资源汇总
     └── further-reading.md
 ```
@@ -191,6 +211,12 @@ llm-math-foundations/
 - [Ch8 - 概率进阶与采样](chapter08-probability-advanced/)
 - [Ch9 - 缩放定律](chapter09-scaling-rl/)
 - [Ch10 - RL 基础与对齐](chapter10-rl-alignment/)
+
+**阶段项目**：
+- [🛠️ 项目 1 - 从零实现线性回归](project01-linear-regression/)（覆盖 Ch1-Ch3）
+- [🛠️ 项目 2 - 从零实现两层神经网络](project02-two-layer-nn/)（覆盖 Ch4-Ch6）
+- [🛠️ 项目 3 - Mini Attention + 解码采样器](project03-mini-attention/)（覆盖 Ch7-Ch8）
+
 - [推荐资源](resources/)
 
 ---

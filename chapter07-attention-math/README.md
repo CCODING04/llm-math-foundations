@@ -2,6 +2,12 @@
 
 > 🌱 *"注意力机制是 Transformer 的心脏——它让模型学会'看哪里'。"*
 
+### 📚 前置知识
+
+学习本章前，你需要熟悉：
+- **Ch4 矩阵深入**：矩阵乘法的运算规则（QK^T 的计算）、Softmax 函数的定义和性质
+- **Ch3 概率统计**：概率分布的基本概念（Softmax 输出就是一个概率分布）
+
 ---
 
 ## 🎯 本章目标 + 在 LLM 中的位置
@@ -107,6 +113,8 @@ print("Softmax 温度对比图已保存")
 
 ### 2. 缩放点积注意力（Scaled Dot-Product Attention）
 
+> **核心**：这是 Attention 的核心公式——$\\text{Softmax}\\left(\\frac{QK^T}{\\sqrt{d_k}}\\right) V$，也是整章最需要吃透的部分。
+
 这是 Attention 的核心公式：
 
 $$\text{Attention}(Q, K, V) = \text{Softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right) V$$
@@ -114,6 +122,8 @@ $$\text{Attention}(Q, K, V) = \text{Softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)
 别急，咱们一步步拆解。
 
 #### Q、K、V 是什么？
+
+> **核心**：QKV 是注意力机制的三个核心角色——理解它们的含义是掌握 Attention 的关键。
 
 - **Q（Query）**：我在找什么？——"我想知道这个词和其他词的关系"
 - **K（Key）**：我有什么？——"我身上有什么信息可以被匹配"
@@ -230,6 +240,8 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
 ---
 
 ### 3. 多头注意力（Multi-Head Attention）
+
+> **核心**：多头注意力让模型同时从多个角度看问题——这是 Transformer 表达能力的关键来源。
 
 #### 为什么要多头？
 
@@ -695,6 +707,280 @@ print(f"\n输出（因果掩码）:\n{output_masked[0, 0].numpy().round(3).tolis
 
 ---
 
+### 📐 完整数值示例：从输入到输出（多头注意力）
+
+上面我们手算了单头注意力。现在我们把整条流水线走一遍——**从原始输入到多头注意力的最终输出**，让你看到完整的 shape 变化链。
+
+#### Shape 总览表
+
+先看全局——多头注意力中每一步的形状变化：
+
+| 步骤 | 张量 | 形状 | 说明 |
+|------|------|------|------|
+| 输入 | $X$ | `(batch, seq_len, d_model)` | 3 个 token，4 维 |
+| Query / Key / Value | $Q, K, V$ | `(batch, seq_len, d_model)` | 线性投影后 |
+| 按头拆分 | $Q_h, K_h, V_h$ | `(batch, heads, seq_len, head_dim)` | reshape + transpose |
+| 注意力分数 | $Q_h K_h^T$ | `(batch, heads, seq_len, seq_len)` | 每个头独立算 |
+| 缩放后分数 | $\frac{Q_h K_h^T}{\sqrt{d_k}}$ | `(batch, heads, seq_len, seq_len)` | 除以 $\sqrt{\text{head\_dim}}$ |
+| 注意力权重 | softmax 后 | `(batch, heads, seq_len, seq_len)` | 每行归一化 |
+| 每个头的输出 | $A_h V_h$ | `(batch, heads, seq_len, head_dim)` | 加权求和 |
+| 拼接 | Concat | `(batch, seq_len, d_model)` | 所有头横向拼 |
+| 最终输出 | $W_O \cdot \text{Concat}$ | `(batch, seq_len, d_model)` | 线性投影 |
+
+> 💡 关键洞察：**每个 head 看到的是同一个输入的不同"视角"**——就像 3 个人从不同角度观察同一个场景，然后把各自看到的拼在一起。
+
+#### 设定参数
+
+- 3 个 token："我"、"爱"、"猫"
+- `d_model = 4`，`heads = 2`，`head_dim = 2`
+- 为方便手算，权重矩阵用简单的小数
+
+#### Step 1：输入矩阵 $X$
+
+$$
+X = \begin{bmatrix} 1.0 & 0.5 & 0.3 & 0.1 \\ 0.8 & 1.2 & 0.4 & 0.6 \\ 0.2 & 0.7 & 1.1 & 0.9 \end{bmatrix} \quad \text{shape: } (3, 4)
+$$
+
+每一行是一个 token 的 4 维 embedding。
+
+#### Step 2：线性投影得到 Q、K、V
+
+$$
+W_Q = \begin{bmatrix} 0.1 & 0.3 & -0.1 & 0.2 \\ 0.4 & -0.2 & 0.3 & 0.1 \\ -0.1 & 0.5 & 0.2 & -0.3 \\ 0.3 & 0.1 & -0.2 & 0.4 \end{bmatrix}, \quad
+Q = X W_Q = \begin{bmatrix} 0.30 & -0.13 & 0.24 & 0.09 \\ 0.49 & -0.10 & 0.18 & 0.30 \\ 0.17 & 0.31 & 0.18 & 0.14 \end{bmatrix}
+$$
+
+$$
+W_K = \begin{bmatrix} 0.2 & -0.1 & 0.3 & 0.1 \\ -0.3 & 0.4 & 0.1 & 0.2 \\ 0.1 & 0.2 & -0.3 & 0.1 \\ 0.4 & -0.1 & 0.2 & 0.3 \end{bmatrix}, \quad
+K = X W_K = \begin{bmatrix} -0.03 & 0.27 & 0.37 & 0.20 \\ 0.10 & 0.28 & 0.48 & 0.46 \\ 0.34 & 0.36 & -0.12 & 0.43 \end{bmatrix}
+$$
+
+$$
+W_V = \begin{bmatrix} 0.3 & 0.1 & 0.2 & -0.1 \\ -0.2 & 0.4 & 0.1 & 0.3 \\ 0.1 & -0.3 & 0.4 & 0.2 \\ 0.4 & 0.2 & -0.1 & 0.1 \end{bmatrix}, \quad
+V = X W_V = \begin{bmatrix} 0.31 & 0.13 & 0.17 & 0.12 \\ 0.32 & 0.50 & 0.23 & 0.40 \\ 0.27 & 0.14 & 0.48 & 0.32 \end{bmatrix}
+$$
+
+Q、K、V 的 shape 都是 `(3, 4)`。
+
+#### Step 3：按头拆分
+
+把 Q、K、V 的最后一维从 `(3, 4)` reshape 成 `(3, 2, 2)`（seq_len × heads × head_dim），再转置成 `(2, 3, 2)`（heads × seq_len × head_dim）：
+
+**Head 1**（取第 0, 2 列）和 **Head 2**（取第 1, 3 列）：
+
+$$
+Q_1 = \begin{bmatrix} 0.30 & 0.24 \\ 0.49 & 0.18 \\ 0.17 & 0.18 \end{bmatrix}, \quad
+Q_2 = \begin{bmatrix} -0.13 & 0.09 \\ -0.10 & 0.30 \\ 0.31 & 0.14 \end{bmatrix}
+$$
+
+$$
+K_1 = \begin{bmatrix} -0.03 & 0.37 \\ 0.10 & 0.48 \\ 0.34 & -0.12 \end{bmatrix}, \quad
+K_2 = \begin{bmatrix} 0.27 & 0.20 \\ 0.28 & 0.46 \\ 0.36 & 0.43 \end{bmatrix}
+$$
+
+$$
+V_1 = \begin{bmatrix} 0.31 & 0.17 \\ 0.32 & 0.23 \\ 0.27 & 0.48 \end{bmatrix}, \quad
+V_2 = \begin{bmatrix} 0.13 & 0.12 \\ 0.50 & 0.40 \\ 0.14 & 0.32 \end{bmatrix}
+$$
+
+每个子矩阵 shape: `(3, 2)`。
+
+#### Step 4：计算注意力分数 $Q_h K_h^T$
+
+**Head 1**：
+
+$$
+Q_1 K_1^T = \begin{bmatrix} 0.30 & 0.24 \\ 0.49 & 0.18 \\ 0.17 & 0.18 \end{bmatrix}
+\begin{bmatrix} -0.03 & 0.10 & 0.34 \\ 0.37 & 0.48 & -0.12 \end{bmatrix}
+= \begin{bmatrix} 0.080 & 0.145 & 0.073 \\ -0.006 & 0.135 & 0.147 \\ 0.062 & 0.106 & 0.036 \end{bmatrix}
+$$
+
+**Head 2**：
+
+$$
+Q_2 K_2^T = \begin{bmatrix} -0.13 & 0.09 \\ -0.10 & 0.30 \\ 0.31 & 0.14 \end{bmatrix}
+\begin{bmatrix} 0.27 & 0.28 & 0.36 \\ 0.20 & 0.46 & 0.43 \end{bmatrix}
+= \begin{bmatrix} -0.017 & 0.005 & -0.009 \\ 0.033 & 0.110 & 0.093 \\ 0.112 & 0.150 & 0.170 \end{bmatrix}
+$$
+
+Shape: `(3, 3)` 每个 head。
+
+#### Step 5：缩放 $\div \sqrt{d_k} = \sqrt{2} \approx 1.414$
+
+**Head 1**（除以 1.414）：
+
+$$
+\text{scores}_1 = \begin{bmatrix} 0.057 & 0.103 & 0.052 \\ -0.004 & 0.095 & 0.104 \\ 0.044 & 0.075 & 0.025 \end{bmatrix}
+$$
+
+**Head 2**（除以 1.414）：
+
+$$
+\text{scores}_2 = \begin{bmatrix} -0.012 & 0.004 & -0.006 \\ 0.023 & 0.078 & 0.066 \\ 0.079 & 0.106 & 0.120 \end{bmatrix}
+$$
+
+#### Step 6：Softmax（每行归一化）
+
+> 注意：这里的分数比较小且接近，所以 softmax 后每个 token 对其他 token 的注意力会比较均匀。这正是小维度+简单权重的特点——真实模型中分数差距会大得多。
+
+**Head 1**（近似值，保留 3 位小数）：
+
+$$
+\alpha_1 \approx \begin{bmatrix} 0.341 & 0.357 & 0.303 \\ 0.321 & 0.348 & 0.332 \\ 0.343 & 0.354 & 0.303 \end{bmatrix}
+$$
+
+**Head 2**：
+
+$$
+\alpha_2 \approx \begin{bmatrix} 0.332 & 0.337 & 0.330 \\ 0.323 & 0.342 & 0.336 \\ 0.338 & 0.348 & 0.353 \end{bmatrix}
+$$
+
+> 💡 注意 Head 2 第 3 行（"猫"）——注意力权重从左到右递增（0.338 → 0.348 → 0.353），说明"猫"更关注后面的 token（包括自己）。而 Head 1 中"我"更关注中间的"爱"（0.357）。**两个头关注的位置偏好不同，这就是多头的价值。**
+
+#### Step 7：加权求和 $A_h V_h$
+
+**Head 1**：
+
+$$
+\text{head}_1 = \alpha_1 \cdot V_1 \approx \begin{bmatrix} 0.300 & 0.205 \\ 0.300 & 0.211 \\ 0.302 & 0.204 \end{bmatrix} \quad \text{shape: } (3, 2)
+$$
+
+**Head 2**：
+
+$$
+\text{head}_2 = \alpha_2 \cdot V_2 \approx \begin{bmatrix} 0.257 & 0.280 \\ 0.260 & 0.290 \\ 0.261 & 0.299 \end{bmatrix} \quad \text{shape: } (3, 2)
+$$
+
+#### Step 8：拼接 Concat
+
+把 head_1 和 head_2 横向拼在一起：
+
+$$
+\text{Concat} = [\text{head}_1 \| \text{head}_2] = \begin{bmatrix} 0.300 & 0.205 & 0.257 & 0.280 \\ 0.300 & 0.211 & 0.260 & 0.290 \\ 0.302 & 0.204 & 0.261 & 0.299 \end{bmatrix} \quad \text{shape: } (3, 4)
+$$
+
+Shape 恢复到 `(3, 4) = (seq_len, d_model)` ✅
+
+#### Step 9：最终线性投影 $W_O$
+
+$$
+W_O = \begin{bmatrix} 0.2 & -0.1 & 0.3 & 0.1 \\ -0.1 & 0.3 & -0.2 & 0.4 \\ 0.3 & 0.1 & 0.2 & -0.1 \\ 0.1 & 0.2 & 0.1 & 0.3 \end{bmatrix}
+$$
+
+$$
+\text{Output} = \text{Concat} \cdot W_O \approx \begin{bmatrix} 0.152 & 0.104 & 0.126 & 0.162 \\ 0.152 & 0.107 & 0.125 & 0.167 \\ 0.156 & 0.103 & 0.125 & 0.167 \end{bmatrix} \quad \text{shape: } (3, 4)
+$$
+
+最终输出 shape: `(3, 4)` = `(seq_len, d_model)` ✅
+
+#### 完整 shape 变化链
+
+```
+X (3,4) → Q,K,V (3,4) → split → Q_h (2,3,2) → QK^T (2,3,3)
+→ scale (2,3,3) → softmax (2,3,3) → AV (2,3,2)
+→ concat (3,4) → W_O (3,4)
+```
+
+> 🎯 **一句话总结**：多头注意力的全部数学操作就是**线性投影 → 分组点积 → 缩放归一化 → 加权求和 → 拼接 → 线性投影**。每个步骤都有明确的 shape，只要记住"分头算、拼回来"，就不会迷路。
+
+#### 💻 代码验证
+
+```python
+import numpy as np
+
+np.set_printoptions(precision=3)
+
+# === 参数 ===
+X = np.array([[1.0, 0.5, 0.3, 0.1],
+              [0.8, 1.2, 0.4, 0.6],
+              [0.2, 0.7, 1.1, 0.9]])  # (3, 4)
+
+W_Q = np.array([[0.1, 0.3, -0.1, 0.2],
+                [0.4, -0.2, 0.3, 0.1],
+                [-0.1, 0.5, 0.2, -0.3],
+                [0.3, 0.1, -0.2, 0.4]])
+
+W_K = np.array([[0.2, -0.1, 0.3, 0.1],
+                [-0.3, 0.4, 0.1, 0.2],
+                [0.1, 0.2, -0.3, 0.1],
+                [0.4, -0.1, 0.2, 0.3]])
+
+W_V = np.array([[0.3, 0.1, 0.2, -0.1],
+                [-0.2, 0.4, 0.1, 0.3],
+                [0.1, -0.3, 0.4, 0.2],
+                [0.4, 0.2, -0.1, 0.1]])
+
+W_O = np.array([[0.2, -0.1, 0.3, 0.1],
+                [-0.1, 0.3, -0.2, 0.4],
+                [0.3, 0.1, 0.2, -0.1],
+                [0.1, 0.2, 0.1, 0.3]])
+
+# === Step 1-2: 线性投影 ===
+Q = X @ W_Q  # (3, 4)
+K = X @ W_K  # (3, 4)
+V = X @ W_V  # (3, 4)
+
+print(f"Q shape: {Q.shape}")
+print(f"Q:\n{Q}\n")
+
+# === Step 3: 按头拆分 (heads=2, head_dim=2) ===
+# 取第 0,2 列为 head 1；第 1,3 列为 head 2
+Q1, K1, V1 = Q[:, [0,2]], K[:, [0,2]], V[:, [0,2]]
+Q2, K2, V2 = Q[:, [1,3]], K[:, [1,3]], V[:, [1,3]]
+
+print(f"Q1 (head 1) shape: {Q1.shape}")
+
+# === Step 4-5: 注意力分数 + 缩放 ===
+dk = 2
+scores1 = Q1 @ K1.T / np.sqrt(dk)
+scores2 = Q2 @ K2.T / np.sqrt(dk)
+
+print(f"\nscores_1:\n{scores1}")
+print(f"scores_2:\n{scores2}")
+
+# === Step 6: Softmax ===
+def softmax(x):
+    e = np.exp(x - x.max(axis=-1, keepdims=True))
+    return e / e.sum(axis=-1, keepdims=True)
+
+alpha1 = softmax(scores1)
+alpha2 = softmax(scores2)
+
+print(f"\nalpha_1 (head 1 weights):\n{alpha1}")
+print(f"alpha_2 (head 2 weights):\n{alpha2}")
+
+# === Step 7: 加权求和 ===
+head1 = alpha1 @ V1  # (3, 2)
+head2 = alpha2 @ V2  # (3, 2)
+
+print(f"\nhead_1 output:\n{head1}")
+print(f"head_2 output:\n{head2}")
+
+# === Step 8: Concat ===
+concat = np.concatenate([head1, head2], axis=1)  # (3, 4)
+print(f"\nConcat shape: {concat.shape}")
+print(f"Concat:\n{concat}")
+
+# === Step 9: 最终线性投影 ===
+output = concat @ W_O  # (3, 4)
+print(f"\n✅ Final output shape: {output.shape}")
+print(f"Output:\n{output}")
+```
+
+跑一遍，确认输出和手推一致！
+
+---
+
+### ✅ 学完本章你应该能做到
+
+1. **手算单头 Attention**：给定 Q、K、V 矩阵，手动完成 QK^T → 缩放 → Softmax → 加权求和的全过程
+2. **解释 Q/K/V 的作用**：说清 Query 是"我在找什么"、Key 是"我有什么"、Value 是"匹配后给你的内容"
+3. **理解因果掩码**：解释为什么自回归模型需要下三角掩码，以及 -∞ 如何在 Softmax 中生效
+4. **解释多头注意力的拼接**：说明"分头 → 各算 → Concat → 线性投影"的完整流程和形状变换
+5. **理解缩放因子**：用方差的推导解释为什么除以 √d_k 对训练稳定性至关重要
+
+---
+
 ## 🎯 LLM 关联
 
 ### GPT 系列的注意力配置
@@ -721,6 +1007,8 @@ $$P_{\text{attn}} = 4 \times d_{\text{model}}^2$$
 
 ### Flash Attention 简介
 
+> **深入**：Flash Attention 是工业级优化——理解它有助于你理解 LLM 推理的工程瓶颈，但不影响对 Attention 数学原理的理解。
+
 标准注意力的瓶颈在于 **中间矩阵 A [n, n] 的显存占用**。当序列长度 n 很大时（如 n = 32K），这个矩阵就要占 32K × 32K × 4 bytes ≈ 4 GB！
 
 **Flash Attention** 的核心思想：
@@ -735,6 +1023,30 @@ $$P_{\text{attn}} = 4 \times d_{\text{model}}^2$$
 - 显存：从 O(n²) 降到 O(n)
 - 速度：实际提升 2-4 倍（减少了显存读写）
 - 数学上**完全等价**（不是近似！）
+
+---
+
+## ⚠️ 常见卡点
+
+### 卡点 1：为什么除以 √d_k？
+
+直觉上不太好理解——为什么注意力分数要除以一个"维度相关"的数？
+
+**关键原因**：点积 $q_i \cdot k_j$ 是 $d_k$ 个分量相乘再相加。当维度 $d_k$ 很大时（比如 64），点积的**值域**也会随之变大（方差 = $d_k$）。如果点积值跑到 ±20 这种范围，Softmax 就会输出接近 one-hot 的分布（比如 `[1.0, 0.0, 0.0]`），此时**梯度几乎为零**，模型学不动了。
+
+除以 √d_k 就是把方差拉回 1，让 Softmax 的输入保持在"梯度友好"的范围。
+
+> 💡 一句话记忆：**缩放 = 控方差 = 防 Softmax 梯度消失 = 让训练稳定。**
+
+### 卡点 2：Q 和 K 到底是什么关系？
+
+Q（Query）和 K（Key）的名字很抽象，但类比一下就清楚了：
+
+- **Query = "我在找什么"**：每个 token 的 Q 是它在问"我需要关注谁？"
+- **Key = "我有什么"**：每个 token 的 K 是它在回答"我身上有这些特征。"
+- **点积 = 匹配度**：Q·K 衡量"你的需求"和"我的特征"有多匹配
+
+> 🖥️ 就像图书馆找书：你的查询词（Q）和每本书的标签（K）做匹配，匹配度高的书你就多读（V）。
 
 ---
 
