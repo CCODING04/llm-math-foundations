@@ -1113,7 +1113,9 @@ Flash Attention 不存储完整的 [n, n] 注意力矩阵，而是分块计算�
 | 因果掩码 | S + 下三角(-∞) | 不偷看未来 |
 | KV Cache | 缓存已计算的 K, V | 不重复计算 |
 
-> 🌱 **下一章预告：** 我们将进入**概率进阶与采样策略**——温度、Top-K、Top-P、MLE/NLL，理解 LLM 如何从概率分布中"采样"出文字。
+## 📚 下一章预告
+
+Softmax、多头注意力、因果掩码——Transformer 的核心机制搞定了！下一章我们进入 **[第八章：概率进阶与采样](../chapter08-probability-advanced/)**——温度、Top-K、Top-P、MLE/NLL，理解 LLM 如何从概率分布中"采样"出文字。🌡️
 
 ---
 

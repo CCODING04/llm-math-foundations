@@ -4,7 +4,11 @@
 """
 
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+plt.rcParams['font.sans-serif'] = ['PingFang SC', 'Heiti SC', 'Arial Unicode MS', 'SimHei']
+plt.rcParams['axes.unicode_minus'] = False
 
 epsilon = 0.2
 ratio = np.linspace(0.0, 2.0, 500)

@@ -1,6 +1,10 @@
 """对比 Top-K 和 Top-P 采样的截断效果"""
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+plt.rcParams['font.sans-serif'] = ['PingFang SC', 'Heiti SC', 'Arial Unicode MS', 'SimHei']
+plt.rcParams['axes.unicode_minus'] = False
 
 def softmax(logits):
     exp_l = np.exp(logits - np.max(logits))

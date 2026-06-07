@@ -1,6 +1,10 @@
 """完整对比不同采样策略生成的 token 序列"""
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+plt.rcParams['font.sans-serif'] = ['PingFang SC', 'Heiti SC', 'Arial Unicode MS', 'SimHei']
+plt.rcParams['axes.unicode_minus'] = False
 
 def softmax(logits, T=1.0):
     scaled = logits / T

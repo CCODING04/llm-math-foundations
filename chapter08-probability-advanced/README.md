@@ -1019,4 +1019,6 @@ $$\min_\theta D_{\text{KL}}(\pi_\theta \| \pi_{\text{ref}})$$
 | MLE | $\max_\theta \prod P_\theta(x_t \| x_{<t})$ | 找最解释数据的参数 |
 | NLL | $-\sum \log P_\theta(x_t \| x_{<t})$ | 训练损失，等价于交叉熵 |
 
-> 🌱 **下一章预告**：我们将进入**缩放定律**——Scaling Law、Chinchilla、幂律拟合。理解大模型训练规模的数学规律。
+## 📚 下一章预告
+
+采样策略、温度、Top-K/P——LLM 如何"说话"弄明白了！下一章我们进入 **[第九章：缩放定律](../chapter09-scaling-rl/)**——Scaling Law、Chinchilla、幂律拟合，理解大模型训练规模的数学规律。📈

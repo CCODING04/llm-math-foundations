@@ -764,4 +764,6 @@ $$\boxed{H(P, Q) = \underbrace{H(P)}_{\text{真实熵}} + \underbrace{D_{KL}(P \
 
 ---
 
-[← 第五章：优化理论](../chapter05-optimization/README.md) | [第七章：注意力机制 →](../chapter07-attention-math/README.md)
+## 📚 下一章预告
+
+熵、交叉熵、KL 散度——LLM 的"度量衡"到手！下一章我们进入 **[第七章：注意力机制](../chapter07-attention-math/)**——Softmax、多头注意力、因果掩码、KV Cache，Transformer 的核心计算。🎯
